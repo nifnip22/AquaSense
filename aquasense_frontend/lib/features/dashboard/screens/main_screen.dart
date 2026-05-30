@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../monitoring/screens/monitor_screen.dart';
+import '../../monitoring/screens/statistic_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -15,7 +16,7 @@ class _MainScreenState extends State<MainScreen> {
   // List of pages corresponding to each tab in the bottom navigation bar
   final List<Widget> _pages = [
     const MonitorScreen(),
-    const Center(child: Text('Halaman Statistic (Segera Hadir)')),
+    const StatisticScreen(),
     const Center(child: Text('Halaman Schedule (Segera Hadir)')),
     const Center(child: Text('Halaman History (Segera Hadir)')),
   ];
