@@ -1,5 +1,7 @@
+import 'package:aquasense_frontend/features/dashboard/screens/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'features/monitoring/providers/sensor_provider.dart';
 
 void main() {
@@ -26,12 +28,11 @@ class AquaSenseApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
-      ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('Fondasi AquaSense Siap!'),
+        textTheme: GoogleFonts.plusJakartaSansTextTheme(
+          Theme.of(context).textTheme,
         ),
       ),
+      home: const MainScreen(),
     );
   }
 }
