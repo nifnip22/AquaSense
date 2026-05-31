@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../monitoring/screens/monitor_screen.dart';
 import '../../monitoring/screens/statistic_screen.dart';
+import '../../history/screens/history_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -19,7 +20,7 @@ class _MainScreenState extends State<MainScreen> {
     const MonitorScreen(),
     const StatisticScreen(),
     const ScheduleScreen(),
-    const Center(child: Text('Halaman History (Segera Hadir)')),
+    const HistoryScreen(),
   ];
 
   @override
