@@ -1,3 +1,4 @@
+import 'package:aquasense_frontend/features/feeding/screens/schedule_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../monitoring/screens/monitor_screen.dart';
@@ -17,7 +18,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = [
     const MonitorScreen(),
     const StatisticScreen(),
-    const Center(child: Text('Halaman Schedule (Segera Hadir)')),
+    const ScheduleScreen(),
     const Center(child: Text('Halaman History (Segera Hadir)')),
   ];
 
