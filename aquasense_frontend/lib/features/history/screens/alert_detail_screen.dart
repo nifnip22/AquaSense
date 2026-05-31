@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../widgets/alert_ph_gauge_card.dart';
 import '../widgets/alert_explanation_card.dart';
 import '../widgets/alert_actions_card.dart';
+import '../../../shared/widgets/secondary_app_bar.dart';
 
 class AlertDetailScreen extends StatelessWidget {
   const AlertDetailScreen({super.key});
@@ -11,28 +12,15 @@ class AlertDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: true,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Alert Detail', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFC62828),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text('CRITICAL', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
-            ),
-          ],
+      appBar: SecondaryAppBar(
+        title: 'Alert Detail',
+        customBadge: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFC62828),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text('CRITICAL', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
         ),
       ),
       body: SingleChildScrollView(
