@@ -4,6 +4,7 @@ import '../../../shared/widgets/custom_app_bar.dart';
 import '../widgets/history_filter_chips.dart';
 import '../widgets/date_section_header.dart';
 import '../widgets/history_log_card.dart';
+import 'alert_detail_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -40,33 +41,42 @@ class HistoryScreen extends StatelessWidget {
             ),
 
             // Item 2: Warning Alert (with Custom Subtitle)
-            HistoryLogCard(
-              title: 'Warning: Critical pH\nLevel',
-              iconData: Icons.error_outline,
-              iconColor: Colors.white,
-              iconBgColor: const Color(0xFFC62828), 
-              borderColor: const Color(0xFFFFCDD2), 
-              showArrow: true,
-              customSubtitle: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEE),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.water_drop, color: Color(0xFFC62828), size: 12),
-                    const SizedBox(width: 4),
-                    Text(
-                      '02:30 PM • pH: 5.5 (Acidic)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFC62828),
+            GestureDetector(
+              onTap: () {
+                // Navigate to Alert Detail Screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AlertDetailScreen()),
+                );
+              },
+              child: HistoryLogCard(
+                title: 'Warning: Critical pH\nLevel',
+                iconData: Icons.error_outline,
+                iconColor: Colors.white,
+                iconBgColor: const Color(0xFFC62828), 
+                borderColor: const Color(0xFFFFCDD2), 
+                showArrow: true,
+                customSubtitle: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.water_drop, color: Color(0xFFC62828), size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        '02:30 PM • pH: 5.5 (Acidic)',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFC62828),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

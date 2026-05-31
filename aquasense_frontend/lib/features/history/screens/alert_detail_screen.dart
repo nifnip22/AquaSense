@@ -1,0 +1,109 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../widgets/alert_ph_gauge_card.dart';
+import '../widgets/alert_explanation_card.dart';
+import '../widgets/alert_actions_card.dart';
+
+class AlertDetailScreen extends StatelessWidget {
+  const AlertDetailScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F9FC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        centerTitle: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Alert Detail', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFC62828),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text('CRITICAL', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(24)),
+              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFC62828), size: 48),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Critical pH Level\nDetected',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.epilogue(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF003355), height: 1.2),
+            ),
+            const SizedBox(height: 8),
+            Text('Today, 02:30 PM', style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.black54)),
+            const SizedBox(height: 32),
+            const AlertPhGaugeCard(),
+            const SizedBox(height: 16),
+            const AlertExplanationCard(),
+            const SizedBox(height: 16),
+            const AlertActionsCard(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F9FC),
+          boxShadow: [
+            BoxShadow(color: Colors.white.withValues(alpha: 0.9), blurRadius: 20, spreadRadius: 10, offset: const Offset(0, -20)),
+          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF007B83),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                  ),
+                  onPressed: () {},
+                  icon: const Icon(Icons.bolt),
+                  label: const Text('Activate Water Pump Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF003355)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.done_all, color: Color(0xFF003355)),
+                  label: const Text('Mark as Resolved', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF003355))),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
