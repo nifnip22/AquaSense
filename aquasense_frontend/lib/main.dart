@@ -1,10 +1,12 @@
 import 'package:aquasense_frontend/features/dashboard/screens/main_screen.dart';
+import 'package:aquasense_frontend/features/feeding/providers/schedule_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/monitoring/providers/sensor_provider.dart';
+import 'features/settings/providers/settings_provider.dart';
 
 void main() async {
   // Make sure Flutter bindings are initialized before we do anything else, especially before we load environment variables or initialize Supabase.
@@ -26,6 +28,8 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SensorProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => ScheduleProvider()),
       ],
       child: const AquaSenseApp(),
     ),

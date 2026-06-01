@@ -1,37 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../providers/schedule_provider.dart';
 
 class FeedQuantityCard extends StatefulWidget {
-  final double initialDuration;
-
-  const FeedQuantityCard({super.key, this.initialDuration = 3.0});
+  const FeedQuantityCard({super.key});
 
   @override
   State<FeedQuantityCard> createState() => _FeedQuantityCardState();
 }
 
 class _FeedQuantityCardState extends State<FeedQuantityCard> {
-  late double _durationSeconds;
-
-  @override
-  void initState() {
-    super.initState();
-    _durationSeconds = widget.initialDuration;
-  }
+  double? _localDuration; 
+  bool _isDragging = false;
 
   @override
   Widget build(BuildContext context) {
+    final providerDuration = context.watch<ScheduleProvider>().feedDuration;
+    
+    // If currently dragging, use the local state value; otherwise, use the provider value.
+    final displayDuration = _isDragging ? (_localDuration ?? providerDuration) : providerDuration;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
       child: Column(
@@ -42,12 +38,8 @@ class _FeedQuantityCardState extends State<FeedQuantityCard> {
               const Icon(Icons.hourglass_bottom, color: Color(0xFF003355), size: 20),
               const SizedBox(width: 8),
               Text(
-                'Feed Quantity',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF003355),
-                ),
+                'Feed Quantity', 
+                style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF003355))
               ),
             ],
           ),
@@ -57,26 +49,15 @@ class _FeedQuantityCardState extends State<FeedQuantityCard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${_durationSeconds.toInt()} Seconds',
-                style: GoogleFonts.epilogue(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF003355),
-                ),
+                '${displayDuration.toInt()} Seconds', 
+                style: GoogleFonts.epilogue(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF003355))
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00BCD4),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFF00BCD4), borderRadius: BorderRadius.circular(12)),
                 child: Text(
-                  '${(_durationSeconds * 10).toInt()}% DOSAGE',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  '${(displayDuration * 10).toInt()}% DOSAGE', 
+                  style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)
                 ),
               ),
             ],
@@ -91,23 +72,29 @@ class _FeedQuantityCardState extends State<FeedQuantityCard> {
               trackHeight: 6.0,
             ),
             child: Slider(
-              value: _durationSeconds,
+              value: displayDuration,
               min: 1,
               max: 10,
               divisions: 9,
+              onChangeStart: (val) {
+                setState(() {
+                  _isDragging = true;
+                  _localDuration = val;
+                });
+              },
               onChanged: (val) {
-                setState(() => _durationSeconds = val);
+                setState(() => _localDuration = val);
+              },
+              onChangeEnd: (val) {
+                setState(() => _isDragging = false);
+                context.read<ScheduleProvider>().saveFeedDuration(val);
               },
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Controls the servo motor duration for precision feed dispensing across the pen diameter.',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              color: Colors.black54,
-              height: 1.5,
-            ),
+            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.black54, height: 1.5),
           ),
         ],
       ),

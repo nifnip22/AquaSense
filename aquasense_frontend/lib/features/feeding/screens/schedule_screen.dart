@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../widgets/schedule_toggle_card.dart';
 import '../widgets/feed_quantity_card.dart';
 import '../widgets/intelligence_settings_card.dart';
+import '../providers/schedule_provider.dart';
 
-class ScheduleScreen extends StatefulWidget {
+class ScheduleScreen extends StatelessWidget {
   const ScheduleScreen({super.key});
 
   @override
-  State<ScheduleScreen> createState() => _ScheduleScreenState();
-}
-
-class _ScheduleScreenState extends State<ScheduleScreen> {
-  // Schedule state variables that would typically be loaded from a backend or local storage
-  bool _isMorningActive = true;
-  bool _isAfternoonActive = true;
-  bool _isNightActive = false;
-
-  @override
   Widget build(BuildContext context) {
+    // 4. Membaca status/state dari provider
+    final scheduleState = context.watch<ScheduleProvider>();
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: const CustomAppBar(),
@@ -67,22 +62,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ScheduleToggleCard(
               time: '08:00 AM',
               label: 'MORNING FEED',
-              isActive: _isMorningActive,
-              onChanged: (val) => setState(() => _isMorningActive = val),
+              isActive: scheduleState.isMorningActive,
+              onChanged: (val) => context.read<ScheduleProvider>().toggleMorning(val),
             ),
             const SizedBox(height: 12),
             ScheduleToggleCard(
               time: '04:00 PM',
               label: 'AFTERNOON FEED',
-              isActive: _isAfternoonActive,
-              onChanged: (val) => setState(() => _isAfternoonActive = val),
+              isActive: scheduleState.isAfternoonActive,
+              onChanged: (val) => context.read<ScheduleProvider>().toggleAfternoon(val),
             ),
             const SizedBox(height: 12),
             ScheduleToggleCard(
               time: '10:00 PM',
               label: 'NIGHT FEED',
-              isActive: _isNightActive,
-              onChanged: (val) => setState(() => _isNightActive = val),
+              isActive: scheduleState.isNightActive,
+              onChanged: (val) => context.read<ScheduleProvider>().toggleNight(val),
             ),
             const SizedBox(height: 16),
 
