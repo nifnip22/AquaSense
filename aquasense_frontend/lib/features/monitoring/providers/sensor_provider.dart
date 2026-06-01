@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/sensor_model.dart';
 
 class SensorProvider extends ChangeNotifier {
+  final _supabase = Supabase.instance.client;
+
   SensorModel _currentData = SensorModel(
     temperature: 28.5,
     phLevel: 7.2,
@@ -37,7 +40,7 @@ class SensorProvider extends ChangeNotifier {
   }
 
   void _startDummyDataStream() {
-    _dummyDataTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    _dummyDataTimer = Timer.periodic(const Duration(seconds: 10), (timer) async { 
       double tempChange = (_random.nextDouble() * 0.4) - 0.2;
       double phChange = (_random.nextDouble() * 0.1) - 0.05;
       double turbidityChange = (_random.nextDouble() * 2.0) - 1.0;
@@ -55,9 +58,21 @@ class SensorProvider extends ChangeNotifier {
       if (_tempHistory.length > 10) _tempHistory.removeAt(0);
       if (_phHistory.length > 10) _phHistory.removeAt(0);
 
-      _timeIndex++;
-
+      _timeIndex++; 
       notifyListeners();
+
+      try {
+        await _supabase.from('sensor_logs').insert({
+          'temperature': _currentData.temperature,
+          'ph_level': _currentData.phLevel,
+          'turbidity': _currentData.turbidity,
+          'water_level': _currentData.waterLevel,
+        });
+        print('Data berhasil dikirim ke Supabase!');
+      } catch (e) {
+        print('Gagal mengirim data: $e');
+      }
+      // ==============================================
     });
   }
 
