@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class FeedLevelCard extends StatelessWidget {
-  const FeedLevelCard({super.key});
+  final double currentLevel;
+
+  const FeedLevelCard({super.key, required this.currentLevel});
 
   @override
   Widget build(BuildContext context) {
@@ -98,14 +100,14 @@ class FeedLevelCard extends StatelessWidget {
                       width: 80,
                       height: 80,
                       child: CircularProgressIndicator(
-                        value: 0.75,
+                        value: currentLevel / 100,
                         strokeWidth: 8,
                         backgroundColor: Colors.white,
                         valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF007B83)),
                       ),
                     ),
                     Text(
-                      '75%',
+                      '${currentLevel.toInt()}%',
                       style: GoogleFonts.epilogue(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,

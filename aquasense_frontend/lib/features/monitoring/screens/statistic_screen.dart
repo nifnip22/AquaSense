@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
 import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
+import '../providers/sensor_provider.dart';
 import '../widgets/metric_chart_card.dart';
 import '../widgets/time_filter.dart';
 import '../widgets/feed_level_card.dart';
@@ -15,6 +17,9 @@ class StatisticScreen extends StatefulWidget {
 class _StatisticScreenState extends State<StatisticScreen> {
   @override
   Widget build(BuildContext context) {
+    final sensorState = context.watch<SensorProvider>();
+    final data = sensorState.currentData;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: const CustomAppBar(),
@@ -46,25 +51,17 @@ class _StatisticScreenState extends State<StatisticScreen> {
               badgeText: 'Stable',
               badgeColor: const Color(0xFFE0F7FA),
               badgeTextColor: const Color(0xFF0097A7),
-              subTitle: 'Last 24 Hours',
-              chartData: [
-                const FlSpot(0, 27.5),
-                const FlSpot(2, 27.8),
-                const FlSpot(4, 28.2),
-                const FlSpot(6, 28.1),
-                const FlSpot(8, 28.8),
-                const FlSpot(10, 29.0),
-                const FlSpot(12, 28.5),
-              ],
+              subTitle: 'Live Monitoring',
+              chartData: sensorState.tempHistory,
+              statsBox1Title: 'CURRENT',
+              statsBox1Value: '${data.temperature}°C',
+              statsBox2Title: 'STATUS',
+              statsBox2Value: 'Optimal',
               lineColor: const Color(0xFF4DD0E1),
               gradientColors: [
                 const Color(0xFF4DD0E1).withValues(alpha: 0.5),
                 const Color(0xFF4DD0E1).withValues(alpha: 0.0),
               ],
-              statsBox1Title: 'AVERAGE',
-              statsBox1Value: '28.2°C',
-              statsBox2Title: 'RANGE',
-              statsBox2Value: '27.5 - 29.0',
             ),
             const SizedBox(height: 16),
 
@@ -76,29 +73,23 @@ class _StatisticScreenState extends State<StatisticScreen> {
               badgeText: 'Optimal',
               badgeColor: const Color(0xFFECEFF1),
               badgeTextColor: const Color(0xFF455A64),
-              subTitle: 'Last 24 Hours',
-              chartData: [
-                const FlSpot(0, 7.1),
-                const FlSpot(3, 7.12),
-                const FlSpot(6, 7.15),
-                const FlSpot(9, 7.14),
-                const FlSpot(12, 7.18),
-              ],
+              subTitle: 'Live Monitoring',
+              chartData: sensorState.phHistory, 
+              statsBox1Title: 'CURRENT',
+              statsBox1Value: '${data.phLevel}',
+              statsBox2Title: 'STABILITY',
+              statsBox2Value: 'High',
               lineColor: const Color(0xFF003355),
               gradientColors: [
                 const Color(0xFF003355).withValues(alpha: 0.3),
                 const Color(0xFF003355).withValues(alpha: 0.0),
               ],
-              statsBox1Title: 'AVERAGE',
-              statsBox1Value: '7.15',
-              statsBox2Title: 'STABILITY',
-              statsBox2Value: 'High',
               isStatsValue2Text: true,
             ),
             const SizedBox(height: 16),
 
             // Card 3: Feed Level
-            const FeedLevelCard(),
+            FeedLevelCard(currentLevel: data.waterLevel),
           ],
         ),
       ),

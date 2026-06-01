@@ -10,7 +10,8 @@ class MonitorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Read the current sensor data from the provider. Whenever sensorData changes, this widget will rebuild with the new values.
-    final sensorData = context.watch<SensorProvider>().sensorData;
+    final sensorState = context.watch<SensorProvider>();
+    final data = sensorState.currentData;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -29,22 +30,22 @@ class MonitorScreen extends StatelessWidget {
               children: [
                 _buildMetricCard(
                   icon: Icons.thermostat,
-                  value: '${sensorData.temperature}°C',
+                  value: '${data.temperature}°C',
                   label: 'WATER TEMP',
                 ),
                 _buildMetricCard(
                   icon: Icons.water_drop,
-                  value: '${sensorData.phLevel}',
+                  value: '${data.phLevel}',
                   label: 'PH LEVEL',
                 ),
                 _buildMetricCard(
                   icon: Icons.waves,
-                  value: 'Normal', // Static for now, can be dynamic based on turbidity value
+                  value: sensorState.turbidityStatusText,
                   label: 'TURBIDITY',
                 ),
                 _buildMetricCard(
                   icon: Icons.inventory_2,
-                  value: '85%', // Static for now, can be dynamic based on feed level value
+                  value: '${data.waterLevel.toInt()}%',
                   label: 'FEED LEVEL',
                 ),
               ],
