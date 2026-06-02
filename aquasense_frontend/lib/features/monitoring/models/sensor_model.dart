@@ -2,13 +2,13 @@ class SensorModel {
   final double temperature;
   final double phLevel;
   final double turbidity;
-  final double waterLevel;
+  final double feedLevel;
 
   SensorModel({
     required this.temperature,
     required this.phLevel,
     required this.turbidity,
-    required this.waterLevel,
+    required this.feedLevel,
   });
 
   /*This factory function will be very helpful for converting data when the application starts 
@@ -19,7 +19,7 @@ class SensorModel {
       temperature: json['temperature']?.toDouble() ?? 0.0,
       phLevel: json['ph_level']?.toDouble() ?? 0.0,
       turbidity: json['turbidity']?.toDouble() ?? 0.0,
-      waterLevel: json['water_level']?.toDouble() ?? 0.0,
+      feedLevel: json['feed_level']?.toDouble() ?? 0.0,
     );
   }
 }

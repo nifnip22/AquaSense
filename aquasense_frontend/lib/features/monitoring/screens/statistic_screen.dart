@@ -88,7 +88,7 @@ class _StatisticScreenState extends State<StatisticScreen> {
             const SizedBox(height: 16),
 
             // Card 3: Feed Level
-            FeedLevelCard(currentLevel: data.waterLevel),
+            FeedLevelCard(currentLevel: data.feedLevel),
           ],
         ),
       ),

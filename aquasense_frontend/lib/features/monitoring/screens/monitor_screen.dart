@@ -45,7 +45,7 @@ class MonitorScreen extends StatelessWidget {
                 ),
                 _buildMetricCard(
                   icon: Icons.inventory_2,
-                  value: '${data.waterLevel.toInt()}%',
+                  value: '${data.feedLevel.toInt()}%',
                   label: 'FEED LEVEL',
                 ),
               ],

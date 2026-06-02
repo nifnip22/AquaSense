@@ -12,7 +12,7 @@ class SensorProvider extends ChangeNotifier {
     temperature: 28.5,
     phLevel: 7.2,
     turbidity: 15.0, 
-    waterLevel: 85.0,
+    feedLevel: 85.0,
   );
 
   SensorModel get currentData => _currentData;
@@ -52,7 +52,7 @@ class SensorProvider extends ChangeNotifier {
         temperature: double.parse((_currentData.temperature + tempChange).toStringAsFixed(1)),
         phLevel: double.parse((_currentData.phLevel + phChange).toStringAsFixed(2)),
         turbidity: (_currentData.turbidity + turbidityChange).clamp(0.0, 100.0), 
-        waterLevel: _currentData.waterLevel, 
+        feedLevel: _currentData.feedLevel, 
       );
 
       _tempHistory.add(FlSpot(_timeIndex, _currentData.temperature));
@@ -71,7 +71,7 @@ class SensorProvider extends ChangeNotifier {
           'temperature': _currentData.temperature,
           'ph_level': _currentData.phLevel,
           'turbidity': _currentData.turbidity,
-          'water_level': _currentData.waterLevel,
+          'feed_level': _currentData.feedLevel,
         });
         print('Data berhasil dikirim ke Supabase!');
       } catch (e) {
