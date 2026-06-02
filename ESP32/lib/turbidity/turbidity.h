@@ -21,16 +21,13 @@ void  turbiditySetup();
 void  turbidityLoop();
 
 int   readAveragedADC(int pin, int samples);
-float adcToVoltage(int adcValue);
-float voltageToNTU(float volt);
-float mapFloat(float x, float inMin, float inMax,
-               float outMin, float outMax);
 void  printTurbidityData();
-void  evaluateWaterQuality(float ntu);
+void  evaluateWaterQuality(int rawAdc);
+
+// ─── Getter Functions (API) ────────────────────────────────
+int   turbidity_get_raw();
 
 // ─── Extern Variabel ─────────────────────────────────────────
-extern float turbidityNTU;
-extern float voltage;
 extern int   rawADC;
 
 #endif
