@@ -7,6 +7,7 @@
 void temperature_init();
 
 // Baca suhu dalam Celsius, return -999.0 jika error
+// Menggunakan smoothing dan offset kalibrasi.
 float temperature_read();
 
 // Print hasil ke Serial
