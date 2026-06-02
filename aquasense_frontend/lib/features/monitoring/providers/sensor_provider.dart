@@ -32,6 +32,9 @@ class SensorProvider extends ChangeNotifier {
   List<FlSpot> get tempHistory => _tempHistory;
   List<FlSpot> get phHistory => _phHistory;
 
+  bool _isTempAlertActive = false; 
+  bool _isPhAlertActive = false;   
+
   Timer? _dummyDataTimer;
   final Random _random = Random();
 
@@ -41,7 +44,7 @@ class SensorProvider extends ChangeNotifier {
 
   void _startDummyDataStream() {
     _dummyDataTimer = Timer.periodic(const Duration(seconds: 10), (timer) async { 
-      double tempChange = (_random.nextDouble() * 0.4) - 0.2;
+      double tempChange = (_random.nextDouble() * 1.0) - 0.5;
       double phChange = (_random.nextDouble() * 0.1) - 0.05;
       double turbidityChange = (_random.nextDouble() * 2.0) - 1.0;
       
@@ -61,6 +64,8 @@ class SensorProvider extends ChangeNotifier {
       _timeIndex++; 
       notifyListeners();
 
+      _checkThresholds(_currentData);
+
       try {
         await _supabase.from('sensor_logs').insert({
           'temperature': _currentData.temperature,
@@ -72,8 +77,46 @@ class SensorProvider extends ChangeNotifier {
       } catch (e) {
         print('Gagal mengirim data: $e');
       }
-      // ==============================================
     });
+  }
+
+  // === CHECK THRESHOLDS FUNCTION ===
+  void _checkThresholds(SensorModel data) async {
+    if (data.temperature >= 30.0 && !_isTempAlertActive) {
+      _isTempAlertActive = true;
+      await _sendAlertToSupabase(
+        type: 'ALERT',
+        title: 'High Temperature Warning',
+        description: 'Water temperature reached critical level at ${data.temperature}°C.',
+      );
+    } else if (data.temperature < 29.5) {
+      _isTempAlertActive = false; 
+    }
+
+    if (data.phLevel <= 6.5 && !_isPhAlertActive) {
+      _isPhAlertActive = true;
+      await _sendAlertToSupabase(
+        type: 'ALERT',
+        title: 'Low pH Level Detected',
+        description: 'Acidity has dropped to ${data.phLevel}. Please check water quality.',
+      );
+    } else if (data.phLevel > 6.8) {
+      _isPhAlertActive = false;
+    }
+  }
+
+  // === FUNCTION FOR SENDING ALERTS TO SUPABASE ===
+  Future<void> _sendAlertToSupabase({required String type, required String title, required String description}) async {
+    try {
+      await _supabase.from('alert_history').insert({
+        'type': type,
+        'title': title,
+        'description': description,
+      });
+      debugPrint('🚨 ALERT DIKIRIM KE SUPABASE: $title');
+    } catch (e) {
+      debugPrint('❌ Gagal mengirim alert: $e');
+    }
   }
 
   String get turbidityStatusText {

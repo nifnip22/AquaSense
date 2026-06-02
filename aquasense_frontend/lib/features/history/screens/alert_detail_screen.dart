@@ -1,15 +1,22 @@
+import 'package:aquasense_frontend/features/history/models/alert_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../widgets/alert_ph_gauge_card.dart';
 import '../widgets/alert_explanation_card.dart';
 import '../widgets/alert_actions_card.dart';
 import '../../../shared/widgets/secondary_app_bar.dart';
 
 class AlertDetailScreen extends StatelessWidget {
-  const AlertDetailScreen({super.key});
+  final AlertModel alert;
+
+  const AlertDetailScreen({super.key, required this.alert});
 
   @override
   Widget build(BuildContext context) {
+    final dateString = DateFormat('EEEE, dd MMMM yyyy').format(alert.createdAt);
+    final timeString = DateFormat('hh:mm a').format(alert.createdAt);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: SecondaryAppBar(
@@ -34,16 +41,19 @@ class AlertDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Critical pH Level\nDetected',
+              alert.title,
               textAlign: TextAlign.center,
               style: GoogleFonts.epilogue(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF003355), height: 1.2),
             ),
             const SizedBox(height: 8),
-            Text('Today, 02:30 PM', style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.black54)),
+            Text(
+              '$dateString, $timeString', 
+              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.black54),
+            ),
             const SizedBox(height: 32),
             const AlertPhGaugeCard(),
             const SizedBox(height: 16),
-            const AlertExplanationCard(),
+            AlertExplanationCard(alert: alert),
             const SizedBox(height: 16),
             const AlertActionsCard(),
           ],
