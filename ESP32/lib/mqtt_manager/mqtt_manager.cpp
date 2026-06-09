@@ -2,12 +2,13 @@
 #include "secrets.h"
 #include "config.h"
 
+#include <WiFiClientSecure.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
 // ── Private objects ───────────────────────────────────────────
-static WiFiClient   wifiClient;
+static WiFiClientSecure wifiClient;
 static PubSubClient mqttClient(wifiClient);
 
 // ── Forward declarations ──────────────────────────────────────
@@ -19,6 +20,8 @@ static void _mqtt_callback(char* topic, byte* payload, unsigned int length);
 void mqtt_manager_setup() {
     Serial.println("[WiFi] Menghubungkan ke: " WIFI_SSID);
     _wifi_connect();
+
+    wifiClient.setInsecure(); // testing, jangan pakai ini di produksi!
 
     mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     mqttClient.setCallback(_mqtt_callback);
@@ -152,8 +155,8 @@ static void _mqtt_connect() {
             mqttClient.subscribe(MQTT_TOPIC_CMD_FEED);
             Serial.printf("[MQTT] 📡 Subscribe: %s\n", MQTT_TOPIC_CMD_FEED);
         } else {
-            Serial.printf("[MQTT] ❌ Gagal (rc=%d), retry %d/3...\n",
-                          mqttClient.state(), retries + 1);
+            Serial.printf("[MQTT] ❌ Gagal (rc=%d) Wifi=%d IP=%s, retry %d/3...\n",
+                          mqttClient.state(), WiFi.status(), WiFi.localIP().toString().c_str(), retries + 1);
             delay(3000);
             retries++;
         }
