@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
 import '../providers/sensor_provider.dart';
@@ -89,7 +88,7 @@ class _StatisticScreenState extends State<StatisticScreen> {
             const SizedBox(height: 16),
 
             // Card 3: Feed Level
-            FeedLevelCard(currentLevel: data.waterLevel),
+            FeedLevelCard(currentLevel: data.feedLevel),
           ],
         ),
       ),
