@@ -3,85 +3,82 @@
 // ╔════════════════════════════════════════════════════════════╗
 // ║           AquaSense — Turbidity Module (TSW-20M)          ║
 // ║  Supply  : 5V ke modul                                    ║
-// ║  Output  : AO → voltage divider (10kΩ/22kΩ) → GPIO 34   ║
+// ║  Output  : AO → voltage divider (10kΩ/22kΩ) → GPIO 32   ║
 // ║  ADC     : 12-bit, atenuasi 11db, Vref 3.3V              ║
 // ║  DO      : tidak digunakan                                ║
-// ║  RAW ADC : 0–4095 (direct mapping, no voltage conversion)║
+// ║  Mode    : RAW ADC direct (no NTU conversion)             ║
 // ╚════════════════════════════════════════════════════════════╝
 
 // ─── Variabel Global ─────────────────────────────────────────
-int           rawADC       = 0;
-unsigned long lastRead     = 0;
+int           rawADC   = 0;
+unsigned long lastRead = 0;
 
 // ─────────────────────────────────────────────────────────────
 void turbiditySetup() {
-  analogReadResolution(12);                           // 12-bit → 0–4095
-  analogSetPinAttenuation(TURBIDITY_AO_PIN, ADC_11db); // ESP32: 0–3.3V range
+    analogReadResolution(12);
+    analogSetPinAttenuation(TURBIDITY_AO_PIN, ADC_11db);
 
-  Serial.println("============================================");
-  Serial.println("  AquaSense - Turbidity Sensor (TSW-20M)  ");
-  Serial.println("  Supply   : 5V | Divider: 10k/22k        ");
-  Serial.println("  ADC      : GPIO 34, 12-bit, 0-3.3V      ");
-  Serial.println("  Mode     : RAW ADC direct mapping        ");
-  Serial.println("  Target   : Ikan Nila (Tilapia)          ");
-  Serial.println("============================================");
+    Serial.println("============================================");
+    Serial.println("  AquaSense - Turbidity Sensor (TSW-20M)  ");
+    Serial.println("  Supply : 5V | Divider: 10kΩ/22kΩ        ");
+    Serial.printf("  ADC Pin: GPIO%d | 12-bit | 0-3.3V\n", TURBIDITY_AO_PIN);
+    Serial.printf("  Optimal: ADC %d – %d\n",
+                  TURBIDITY_RAW_OPTIMAL_MIN, TURBIDITY_RAW_OPTIMAL_MAX);
+    Serial.println("============================================");
 }
 
 // ─────────────────────────────────────────────────────────────
 void turbidityLoop() {
-  unsigned long now = millis();
+    unsigned long now = millis();
 
-  if (now - lastRead >= READ_INTERVAL) {
-    lastRead = now;
-
-    rawADC       = readAveragedADC(TURBIDITY_AO_PIN, NUM_SAMPLES);
-
-    printTurbidityData();
-    evaluateWaterQuality(rawADC);
-    Serial.println("--------------------------------------------");
-  }
+    if (now - lastRead >= TURBIDITY_READ_INTERVAL) {
+        lastRead = now;
+        rawADC   = turbidity_read_averaged(TURBIDITY_AO_PIN, TURBIDITY_NUM_SAMPLES);
+        turbidityPrint();
+        turbidityEvaluate(rawADC);
+        Serial.println("--------------------------------------------");
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
 // Rata-rata ADC dari beberapa sampel untuk mengurangi noise
-int readAveragedADC(int pin, int samples) {
-  long total = 0;
-  for (int i = 0; i < samples; i++) {
-    total += analogRead(pin);
-    delay(SAMPLE_INTERVAL);
-  }
-  return (int)(total / samples);
-}
-// (NTU conversion removed) We report RAW ADC only and use RAW thresholds
-// for status messages (see config.h for threshold macros).
-
-
 // ─────────────────────────────────────────────────────────────
-void printTurbidityData() {
-  Serial.println("[Turbidity] TSW-20M Reading:");
-  Serial.print("  ADC Raw   : "); Serial.println(rawADC);
+int turbidity_read_averaged(int pin, int samples) {
+    long total = 0;
+    for (int i = 0; i < samples; i++) {
+        total += analogRead(pin);
+        delay(TURBIDITY_SAMPLE_INTERVAL);
+    }
+    return (int)(total / samples);
 }
 
 // ─────────────────────────────────────────────────────────────
-// Status evaluation using RAW ADC thresholds (config.h)
-void evaluateWaterQuality(int rawAdc) {
-  Serial.print("  Status    : ");
-
-  if (rawAdc >= TURBIDITY_RAW_CLEAR_MIN) {
-    Serial.println("[WARNING] Terlalu jernih - cek aerasi & plankton");
-  } else if (rawAdc >= TURBIDITY_RAW_OPTIMAL_MIN && rawAdc <= TURBIDITY_RAW_OPTIMAL_MAX) {
-    Serial.println("[OK] OPTIMAL - Kondisi ideal untuk ikan nila");
-  } else if (rawAdc > TURBIDITY_RAW_WARNING_MAX && rawAdc < TURBIDITY_RAW_OPTIMAL_MIN) {
-    Serial.println("[WARNING] Agak keruh - monitor lebih sering");
-  } else {
-    Serial.println("[DANGER] Terlalu keruh! Segera filter/ganti air");
-  }
+void turbidityPrint() {
+    Serial.println("[Turbidity] TSW-20M Reading:");
+    Serial.printf("  ADC Raw : %d\n", rawADC);
 }
 
-// ═════════════════════════════════════════════════════════════
-// ─── Getter Functions (API for MQTT) ────────────────────────
-// ═════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────
+// Evaluasi status kualitas air berdasarkan RAW ADC threshold
+// (config.h — sinkron dengan backend thresholds.js)
+// ─────────────────────────────────────────────────────────────
+void turbidityEvaluate(int raw) {
+    Serial.print("  Status  : ");
 
+    if (raw >= TURBIDITY_RAW_CLEAR_MIN) {
+        Serial.println("[WARNING] Terlalu jernih — cek aerasi & plankton");
+    } else if (raw >= TURBIDITY_RAW_OPTIMAL_MIN && raw <= TURBIDITY_RAW_OPTIMAL_MAX) {
+        Serial.println("[OK] OPTIMAL — Kondisi ideal untuk ikan nila");
+    } else if (raw > TURBIDITY_RAW_WARNING_MAX && raw < TURBIDITY_RAW_OPTIMAL_MIN) {
+        Serial.println("[WARNING] Agak keruh — monitor lebih sering");
+    } else {
+        Serial.println("[DANGER] Terlalu keruh! Segera filter/ganti air");
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Getter untuk MQTT publish
+// ─────────────────────────────────────────────────────────────
 int turbidity_get_raw() {
-  return rawADC;
+    return rawADC;
 }

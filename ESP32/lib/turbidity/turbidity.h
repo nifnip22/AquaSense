@@ -6,28 +6,28 @@
 
 // ─── Wiring TSW-20M ─────────────────────────────────────────
 //
-//  Sisi Probe          Modul PCB          ESP32
-//  ──────────────      ─────────────      ──────────────────────
-//  Y (kuning)  ──┐     V  ────────── →    5V (VIN)
-//  B (biru)    ──┤     G  ────────── →    GND
-//  R (merah)   ──┘     A  → [divider] →   GPIO 34
-//                      D  → (tidak dipakai)
+//  Sisi Probe         Modul PCB         ESP32
+//  ─────────────      ─────────────     ──────────────────────
+//  Y (kuning)  ──┐    V  ──────────  →  5V (VIN)
+//  B (biru)    ──┤    G  ──────────  →  GND
+//  R (merah)   ──┘    A  → [divider] →  GPIO 32
+//                     D  → tidak dipakai
 //
 //  Voltage Divider:
-//    Modul AO → R1 (10kΩ) → GPIO 34 → R2 (22kΩ) → GND
+//    Modul AO → R1 (10kΩ) → GPIO 32 → R2 (22kΩ) → GND
+
+// ─── Extern variabel (dibaca dari main/mqtt) ─────────────────
+extern int rawADC;
 
 // ─── Function Prototypes ─────────────────────────────────────
-void  turbiditySetup();
-void  turbidityLoop();
+void turbiditySetup();
+void turbidityLoop();
 
-int   readAveragedADC(int pin, int samples);
-void  printTurbidityData();
-void  evaluateWaterQuality(int rawAdc);
+int  turbidity_read_averaged(int pin, int samples);
+void turbidityPrint();
+void turbidityEvaluate(int raw);
 
-// ─── Getter Functions (API) ────────────────────────────────
-int   turbidity_get_raw();
+// ─── Getter API untuk MQTT ────────────────────────────────────
+int  turbidity_get_raw();
 
-// ─── Extern Variabel ─────────────────────────────────────────
-extern int   rawADC;
-
-#endif
+#endif // TURBIDITY_H
