@@ -4,7 +4,6 @@ import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
 import '../providers/sensor_provider.dart';
 import '../widgets/metric_chart_card.dart';
 import '../widgets/time_filter.dart';
-import '../widgets/feed_level_card.dart';
 
 class StatisticScreen extends StatefulWidget {
   const StatisticScreen({super.key});
@@ -29,14 +28,7 @@ class _StatisticScreenState extends State<StatisticScreen> {
             TimeFilter(
               onFilterChanged: (index) {
                 setState(() {
-                  // In this block, it can update the data displayed in the charts based on the selected time filter. For example:
-                  // if (index == 0) {
-                  //   // Load data for last 24 hours
-                  // } else if (index == 1) {
-                  //   // Load data for last 7 days
-                  // } else if (index == 2) {
-                  //   // Load data for last 30 days
-                  // }
+                  // Filter logika waktu nantinya diletakkan di sini
                 });
               },
             ),
@@ -47,15 +39,15 @@ class _StatisticScreenState extends State<StatisticScreen> {
               title: 'Water Temperature',
               icon: Icons.thermostat,
               iconColor: const Color(0xFF00BCD4),
-              badgeText: 'Stable',
+              badgeText: 'Live',
               badgeColor: const Color(0xFFE0F7FA),
               badgeTextColor: const Color(0xFF0097A7),
-              subTitle: 'Live Monitoring',
+              subTitle: 'Current Water Temp',
               chartData: sensorState.tempHistory,
               statsBox1Title: 'CURRENT',
               statsBox1Value: '${data.temperature}°C',
               statsBox2Title: 'STATUS',
-              statsBox2Value: 'Optimal',
+              statsBox2Value: (data.tempStatus ?? 'Normal').toUpperCase(),
               lineColor: const Color(0xFF4DD0E1),
               gradientColors: [
                 const Color(0xFF4DD0E1).withValues(alpha: 0.5),
@@ -64,20 +56,20 @@ class _StatisticScreenState extends State<StatisticScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Card 2: pH Level
+            // Card 2: Feed Level Trend
             MetricChartCard(
-              title: 'pH Level',
-              icon: Icons.water_drop,
+              title: 'Feed Level Trend',
+              icon: Icons.inventory_2,
               iconColor: const Color(0xFF003355),
-              badgeText: 'Optimal',
+              badgeText: 'Live',
               badgeColor: const Color(0xFFECEFF1),
               badgeTextColor: const Color(0xFF455A64),
-              subTitle: 'Live Monitoring',
-              chartData: sensorState.phHistory, 
+              subTitle: 'Dispenser Capacity',
+              chartData: sensorState.feedLevelHistory, 
               statsBox1Title: 'CURRENT',
-              statsBox1Value: '${data.phLevel}',
-              statsBox2Title: 'STABILITY',
-              statsBox2Value: 'High',
+              statsBox1Value: '${data.feedLevelPct.toInt()}%',
+              statsBox2Title: 'STATUS',
+              statsBox2Value: (data.feedStatus ?? 'Sufficient').toUpperCase(),
               lineColor: const Color(0xFF003355),
               gradientColors: [
                 const Color(0xFF003355).withValues(alpha: 0.3),
@@ -85,10 +77,6 @@ class _StatisticScreenState extends State<StatisticScreen> {
               ],
               isStatsValue2Text: true,
             ),
-            const SizedBox(height: 16),
-
-            // Card 3: Feed Level
-            FeedLevelCard(currentLevel: data.feedLevel),
           ],
         ),
       ),

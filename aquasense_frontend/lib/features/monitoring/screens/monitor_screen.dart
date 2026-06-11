@@ -9,7 +9,6 @@ class MonitorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Read the current sensor data from the provider. Whenever sensorData changes, this widget will rebuild with the new values.
     final sensorState = context.watch<SensorProvider>();
     final data = sensorState.currentData;
 
@@ -34,24 +33,26 @@ class MonitorScreen extends StatelessWidget {
                   label: 'WATER TEMP',
                 ),
                 _buildMetricCard(
-                  icon: Icons.water_drop,
-                  value: '${data.phLevel}',
-                  label: 'PH LEVEL',
+                  icon: Icons.analytics_outlined,
+                  value: (data.tempStatus ?? 'Normal').toUpperCase(),
+                  label: 'TEMP STATUS',
                 ),
                 _buildMetricCard(
                   icon: Icons.waves,
-                  value: sensorState.turbidityStatusText,
+                  value: sensorState.turbidityStatusText
+                      .replaceAll('_', ' ')
+                      .toUpperCase(),
                   label: 'TURBIDITY',
                 ),
                 _buildMetricCard(
                   icon: Icons.inventory_2,
-                  value: '${data.feedLevel.toInt()}%',
+                  value: '${data.feedLevelPct.toInt()}%',
                   label: 'FEED LEVEL',
                 ),
               ],
             ),
             const SizedBox(height: 32),
-            
+
             // Control Center
             Row(
               children: [
@@ -68,7 +69,7 @@ class MonitorScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Dispense Feed Button
             SizedBox(
               width: double.infinity,
@@ -86,14 +87,17 @@ class MonitorScreen extends StatelessWidget {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('DISPENSE FEED', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'DISPENSE FEED',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Icon(Icons.restaurant),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Water Pump Status
             Container(
               padding: const EdgeInsets.all(16),
@@ -110,16 +114,25 @@ class MonitorScreen extends StatelessWidget {
                         children: [
                           Icon(Icons.water, color: Colors.black54),
                           SizedBox(width: 8),
-                          Text('Water Pump', style: TextStyle(color: Colors.black87)),
+                          Text(
+                            'Water Pump',
+                            style: TextStyle(color: Colors.black87),
+                          ),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text('Standby', style: TextStyle(fontSize: 12)),
+                        child: const Text(
+                          'Standby',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ),
                     ],
                   ),
@@ -128,7 +141,10 @@ class MonitorScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.access_time, size: 16, color: Colors.black54),
                       SizedBox(width: 8),
-                      Text('Last fed: 16:30 WITA', style: TextStyle(color: Colors.black54)),
+                      Text(
+                        'Last fed: 16:30 WITA',
+                        style: TextStyle(color: Colors.black54),
+                      ),
                     ],
                   ),
                 ],
@@ -141,7 +157,11 @@ class MonitorScreen extends StatelessWidget {
   }
 
   // Helper widget for building each metric card with consistent styling
-  Widget _buildMetricCard({required IconData icon, required String value, required String label}) {
+  Widget _buildMetricCard({
+    required IconData icon,
+    required String value,
+    required String label,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -168,12 +188,16 @@ class MonitorScreen extends StatelessWidget {
             child: Icon(icon, color: const Color(0xFF0288D1)),
           ),
           const Spacer(),
-          Text(
-            value,
-            style: GoogleFonts.epilogue(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF003355),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: GoogleFonts.epilogue(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF003355),
+              ),
             ),
           ),
           const SizedBox(height: 4),
