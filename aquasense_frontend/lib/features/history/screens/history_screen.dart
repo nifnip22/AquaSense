@@ -31,7 +31,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<List<AlertModel>> fetchAlertHistory() async {
     final supabase = Supabase.instance.client;
     final response = await supabase
-        .from('alert_history')
+        .from('alerts')
         .select()
         .order('created_at', ascending: false)
         .limit(20);
