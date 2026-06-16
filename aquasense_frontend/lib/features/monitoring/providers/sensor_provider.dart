@@ -31,9 +31,13 @@ class SensorProvider extends ChangeNotifier {
   List<FlSpot> get feedLevelHistory => _feedLevelHistory;
 
   Timer? _fetchTimer;
+  Timer? _statusTimer;
 
   bool _isDispensing = false;
   bool get isDispensing => _isDispensing;
+
+  bool _isDeviceOnline = false;
+  bool get isDeviceOnline => _isDeviceOnline;
 
   SensorProvider() {
     _startRealDataFetch();
@@ -46,6 +50,28 @@ class SensorProvider extends ChangeNotifier {
     _fetchTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       _fetchLatestData();
     });
+
+    _statusTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _evaluateDeviceStatus();
+    });
+  }
+
+  void _evaluateDeviceStatus() {
+    if (_currentData.recordedAt == null) {
+      if (_isDeviceOnline) {
+        _isDeviceOnline = false;
+        notifyListeners();
+      }
+      return;
+    }
+
+    final difference = DateTime.now().difference(_currentData.recordedAt!);
+    final isCurrentlyOnline = difference.inMinutes < 3;
+
+    if (_isDeviceOnline != isCurrentlyOnline) {
+      _isDeviceOnline = isCurrentlyOnline;
+      notifyListeners();
+    }
   }
 
   Future<void> _fetchLatestData() async {
@@ -57,9 +83,9 @@ class SensorProvider extends ChangeNotifier {
 
       if (response.isNotEmpty) {
         final data = response.first;
-        
-        // Jauh lebih bersih dan elegan bukan?
         _currentData = SensorModel.fromJson(data);
+
+        _evaluateDeviceStatus();
 
         _tempHistory.add(FlSpot(_timeIndex, _currentData.temperature));
         _phHistory.add(FlSpot(_timeIndex, _currentData.phLevel));
@@ -108,6 +134,7 @@ class SensorProvider extends ChangeNotifier {
   @override
   void dispose() {
     _fetchTimer?.cancel();
+    _statusTimer?.cancel();
     super.dispose();
   }
 }

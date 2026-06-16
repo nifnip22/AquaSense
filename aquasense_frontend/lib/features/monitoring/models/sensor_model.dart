@@ -7,6 +7,7 @@ class SensorModel {
   final String? turbidityStatus;
   final double feedLevelPct;
   final String? feedStatus;
+  final DateTime? recordedAt;
 
   SensorModel({
     required this.temperature,
@@ -17,6 +18,7 @@ class SensorModel {
     this.turbidityStatus,
     required this.feedLevelPct,
     this.feedStatus,
+    this.recordedAt,
   });
 
   factory SensorModel.fromJson(Map<String, dynamic> json) {
@@ -36,6 +38,9 @@ class SensorModel {
       turbidityStatus: json['turbidity_status']?.toString() ?? 'Unknown',
       feedLevelPct: safeDouble(json['feed_level_pct']),
       feedStatus: json['feed_status']?.toString() ?? 'Unknown',
+      recordedAt: json['recorded_at'] != null 
+          ? DateTime.tryParse(json['recorded_at'].toString())?.toLocal() 
+          : null,
     );
   }
 }
