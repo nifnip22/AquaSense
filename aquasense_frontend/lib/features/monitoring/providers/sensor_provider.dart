@@ -32,6 +32,9 @@ class SensorProvider extends ChangeNotifier {
 
   Timer? _fetchTimer;
 
+  bool _isDispensing = false;
+  bool get isDispensing => _isDispensing;
+
   SensorProvider() {
     _startRealDataFetch();
   }
@@ -54,15 +57,23 @@ class SensorProvider extends ChangeNotifier {
 
       if (response.isNotEmpty) {
         final data = response.first;
-        
+
         _currentData = SensorModel(
-          temperature: data['temperature'] != null ? (data['temperature'] as num).toDouble() : 0.0,
+          temperature: data['temperature'] != null
+              ? (data['temperature'] as num).toDouble()
+              : 0.0,
           tempStatus: data['temp_status'] ?? 'Unknown',
-          phLevel: data['ph_level'] != null ? (data['ph_level'] as num).toDouble() : 0.0,
+          phLevel: data['ph_level'] != null
+              ? (data['ph_level'] as num).toDouble()
+              : 0.0,
           phStatus: data['ph_status'] ?? 'Unknown',
-          turbidityRaw: data['turbidity_raw'] != null ? (data['turbidity_raw'] as num).toInt() : 0,
+          turbidityRaw: data['turbidity_raw'] != null
+              ? (data['turbidity_raw'] as num).toInt()
+              : 0,
           turbidityStatus: data['turbidity_status'] ?? 'Unknown',
-          feedLevelPct: data['feed_level_pct'] != null ? (data['feed_level_pct'] as num).toDouble() : 0.0,
+          feedLevelPct: data['feed_level_pct'] != null
+              ? (data['feed_level_pct'] as num).toDouble()
+              : 0.0,
           feedStatus: data['feed_status'] ?? 'Unknown',
         );
 
@@ -84,6 +95,30 @@ class SensorProvider extends ChangeNotifier {
 
   String get turbidityStatusText {
     return _currentData.turbidityStatus ?? 'Unknown';
+  }
+
+  Future<bool> dispenseFeedManual(int durationSec) async {
+    if (_isDispensing) return false;
+
+    _isDispensing = true;
+    notifyListeners();
+
+    try {
+      await _supabase.from('feeding_logs').insert({
+        'trigger_type': 'manual',
+        'duration_sec': durationSec,
+        'notes': 'Triggered instantly from mobile app',
+      });
+
+      await Future.delayed(const Duration(seconds: 10));
+      return true;
+    } catch (e) {
+      debugPrint('Gagal memicu pemberian pakan manual: $e');
+      return false;
+    } finally {
+      _isDispensing = false;
+      notifyListeners();
+    }
   }
 
   @override

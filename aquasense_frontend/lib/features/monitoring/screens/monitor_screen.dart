@@ -76,22 +76,56 @@ class MonitorScreen extends StatelessWidget {
               height: 56,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF003355),
+                  // Jika sedang dispensing, ubah warna menjadi abu-abu
+                  backgroundColor: sensorState.isDispensing 
+                      ? Colors.grey.shade400 
+                      : const Color(0xFF003355),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                onPressed: () {
-                  // Logika memicu aktuator blower nantinya
-                },
-                child: const Row(
+                // LOGIKA ANTI-SPAM: Jika isDispensing TRUE, onPressed menjadi null (disabled)
+                onPressed: sensorState.isDispensing
+                    ? null 
+                    : () async {
+                        // Tampilkan indikasi awal ke pengguna
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Mengirim perintah ke dispenser pakan...'),
+                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+
+                        final sukses = await sensorState.dispenseFeedManual(5);
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(sukses 
+                                  ? 'Pakan berhasil dikeluarkan! Memulai masa cooldown alat...' 
+                                  : 'Gagal menghubungi server.'),
+                              backgroundColor: sukses ? const Color(0xFF0288D1) : Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // Teks berubah dinamis sesuai status gembok
                     Text(
-                      'DISPENSE FEED',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      sensorState.isDispensing ? 'COOLING DOWN (10s)...' : 'DISPENSE FEED', 
+                      style: const TextStyle(fontWeight: FontWeight.bold)
                     ),
-                    Icon(Icons.restaurant),
+                    sensorState.isDispensing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.restaurant),
                   ],
                 ),
               ),
