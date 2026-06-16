@@ -1,3 +1,4 @@
+import 'package:aquasense_frontend/features/monitoring/widgets/feed_level_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
@@ -56,20 +57,20 @@ class _StatisticScreenState extends State<StatisticScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Card 2: Feed Level Trend
+            // Card 2: pH Level
             MetricChartCard(
-              title: 'Feed Level Trend',
-              icon: Icons.inventory_2,
+              title: 'pH Level',
+              icon: Icons.water_drop,
               iconColor: const Color(0xFF003355),
               badgeText: 'Live',
               badgeColor: const Color(0xFFECEFF1),
               badgeTextColor: const Color(0xFF455A64),
-              subTitle: 'Dispenser Capacity',
-              chartData: sensorState.feedLevelHistory, 
+              subTitle: 'Live Monitoring',
+              chartData: sensorState.phHistory, 
               statsBox1Title: 'CURRENT',
-              statsBox1Value: '${data.feedLevelPct.toInt()}%',
+              statsBox1Value: '${data.phLevel}',
               statsBox2Title: 'STATUS',
-              statsBox2Value: (data.feedStatus ?? 'Sufficient').toUpperCase(),
+              statsBox2Value: (data.phStatus ?? 'Optimal').toUpperCase(),
               lineColor: const Color(0xFF003355),
               gradientColors: [
                 const Color(0xFF003355).withValues(alpha: 0.3),
@@ -77,6 +78,10 @@ class _StatisticScreenState extends State<StatisticScreen> {
               ],
               isStatsValue2Text: true,
             ),
+            const SizedBox(height: 16),
+
+            // Card 3: Feed Level Gauge
+            FeedLevelCard(currentLevel: data.feedLevelPct),
           ],
         ),
       ),

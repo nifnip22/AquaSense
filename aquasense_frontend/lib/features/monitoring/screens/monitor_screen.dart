@@ -33,9 +33,9 @@ class MonitorScreen extends StatelessWidget {
                   label: 'WATER TEMP',
                 ),
                 _buildMetricCard(
-                  icon: Icons.analytics_outlined,
-                  value: (data.tempStatus ?? 'Normal').toUpperCase(),
-                  label: 'TEMP STATUS',
+                  icon: Icons.water_drop,
+                  value: '${data.phLevel}',
+                  label: 'PH LEVEL',
                 ),
                 _buildMetricCard(
                   icon: Icons.waves,

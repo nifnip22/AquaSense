@@ -10,6 +10,8 @@ class SensorProvider extends ChangeNotifier {
   SensorModel _currentData = SensorModel(
     temperature: 0.0,
     tempStatus: 'waiting...',
+    phLevel: 0.0,
+    phStatus: 'waiting...',
     turbidityRaw: 0,
     turbidityStatus: 'waiting...',
     feedLevelPct: 0.0,
@@ -19,11 +21,13 @@ class SensorProvider extends ChangeNotifier {
   SensorModel get currentData => _currentData;
 
   final List<FlSpot> _tempHistory = [];
+  final List<FlSpot> _phHistory = [];
   final List<FlSpot> _feedLevelHistory = [];
 
   double _timeIndex = 0;
 
   List<FlSpot> get tempHistory => _tempHistory;
+  List<FlSpot> get phHistory => _phHistory;
   List<FlSpot> get feedLevelHistory => _feedLevelHistory;
 
   Timer? _fetchTimer;
@@ -54,6 +58,8 @@ class SensorProvider extends ChangeNotifier {
         _currentData = SensorModel(
           temperature: data['temperature'] != null ? (data['temperature'] as num).toDouble() : 0.0,
           tempStatus: data['temp_status'] ?? 'Unknown',
+          phLevel: data['ph_level'] != null ? (data['ph_level'] as num).toDouble() : 0.0,
+          phStatus: data['ph_status'] ?? 'Unknown',
           turbidityRaw: data['turbidity_raw'] != null ? (data['turbidity_raw'] as num).toInt() : 0,
           turbidityStatus: data['turbidity_status'] ?? 'Unknown',
           feedLevelPct: data['feed_level_pct'] != null ? (data['feed_level_pct'] as num).toDouble() : 0.0,
@@ -61,13 +67,14 @@ class SensorProvider extends ChangeNotifier {
         );
 
         _tempHistory.add(FlSpot(_timeIndex, _currentData.temperature));
+        _phHistory.add(FlSpot(_timeIndex, _currentData.phLevel));
         _feedLevelHistory.add(FlSpot(_timeIndex, _currentData.feedLevelPct));
 
         if (_tempHistory.length > 10) _tempHistory.removeAt(0);
+        if (_phHistory.length > 10) _phHistory.removeAt(0);
         if (_feedLevelHistory.length > 10) _feedLevelHistory.removeAt(0);
 
         _timeIndex++;
-        
         notifyListeners();
       }
     } catch (e) {
