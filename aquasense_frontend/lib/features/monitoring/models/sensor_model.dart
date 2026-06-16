@@ -19,18 +19,22 @@ class SensorModel {
     this.feedStatus,
   });
 
-  /*This factory function will be very helpful for converting data when the application starts 
-   *receiving JSON format from the API or Supabase later on.
-  */ 
   factory SensorModel.fromJson(Map<String, dynamic> json) {
+    double safeDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return SensorModel(
-      temperature: json['temperature']?.toDouble() ?? 0.0,
+      temperature: safeDouble(json['temperature']),
       tempStatus: json['temp_status']?.toString() ?? 'Unknown',
-      phLevel: json['ph_level']?.toDouble() ?? 0.0,
+      phLevel: safeDouble(json['ph'] ?? json['pH']), 
       phStatus: json['ph_status']?.toString() ?? 'Unknown',
-      turbidityRaw: json['turbidity_raw']?.toInt() ?? 0,
+      turbidityRaw: (json['turbidity_raw'] as num?)?.toInt() ?? 0,
       turbidityStatus: json['turbidity_status']?.toString() ?? 'Unknown',
-      feedLevelPct: json['feed_level_pct']?.toDouble() ?? 0.0,
+      feedLevelPct: safeDouble(json['feed_level_pct']),
       feedStatus: json['feed_status']?.toString() ?? 'Unknown',
     );
   }

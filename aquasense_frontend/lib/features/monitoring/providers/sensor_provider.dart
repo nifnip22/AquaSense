@@ -57,25 +57,9 @@ class SensorProvider extends ChangeNotifier {
 
       if (response.isNotEmpty) {
         final data = response.first;
-
-        _currentData = SensorModel(
-          temperature: data['temperature'] != null
-              ? (data['temperature'] as num).toDouble()
-              : 0.0,
-          tempStatus: data['temp_status'] ?? 'Unknown',
-          phLevel: data['ph_level'] != null
-              ? (data['ph_level'] as num).toDouble()
-              : 0.0,
-          phStatus: data['ph_status'] ?? 'Unknown',
-          turbidityRaw: data['turbidity_raw'] != null
-              ? (data['turbidity_raw'] as num).toInt()
-              : 0,
-          turbidityStatus: data['turbidity_status'] ?? 'Unknown',
-          feedLevelPct: data['feed_level_pct'] != null
-              ? (data['feed_level_pct'] as num).toDouble()
-              : 0.0,
-          feedStatus: data['feed_status'] ?? 'Unknown',
-        );
+        
+        // Jauh lebih bersih dan elegan bukan?
+        _currentData = SensorModel.fromJson(data);
 
         _tempHistory.add(FlSpot(_timeIndex, _currentData.temperature));
         _phHistory.add(FlSpot(_timeIndex, _currentData.phLevel));
