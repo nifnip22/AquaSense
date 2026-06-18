@@ -11,11 +11,11 @@
 // 1. TEMPERATURE SENSOR — DS18B20
 // ═════════════════════════════════════════════════════════════
 // Wiring:
-//   Data (kuning) → GPIO 14 + pull-up 4.7kΩ ke 3.3V
+//   Data (kuning) → GPIO 4 + pull-up 4.7kΩ ke 3.3V
 //   VCC  (merah)  → 3.3V
 //   GND  (hitam)  → GND
 
-#define PIN_TEMP_SENSOR         14      // DS18B20 DATA pin
+#define PIN_TEMP_SENSOR         4      // DS18B20 DATA pin
 
 #define TEMP_READ_INTERVAL      500     // ms — interval baca suhu
 #define TEMP_SAMPLE_COUNT       5       // jumlah sampel untuk smoothing
@@ -28,41 +28,18 @@
 
 
 // ═════════════════════════════════════════════════════════════
-// 1B. SOIL MOISTURE SENSOR — Analog probe
-// ═════════════════════════════════════════════════════════════
-// Wiring:
-//   AO   → GPIO 34 (ADC input-only)
-//   VCC  → 3.3V
-//   GND  → GND
-//
-// Kalibrasi default ini hanya fallback. Sesuaikan dengan nilai
-// sensor Anda setelah membaca raw saat kondisi kering/basah.
-#ifndef SOIL_PIN
-#define SOIL_PIN                34      // GPIO analog input untuk sensor tanah
-#endif
-
-#ifndef DRY_VALUE
-#define DRY_VALUE               4095    // nilai raw saat sensor benar-benar kering
-#endif
-
-#ifndef WET_VALUE
-#define WET_VALUE               1800    // nilai raw saat sensor benar-benar basah
-#endif
-
-
-// ═════════════════════════════════════════════════════════════
 // 2. TURBIDITY SENSOR — TSW-20M
 // ═════════════════════════════════════════════════════════════
 // Wiring:
 //   VCC  → 5V (VIN ESP32)
 //   GND  → GND
-//   AO   → Voltage Divider → GPIO 32
+//   AO   → Voltage Divider → GPIO 35
 //          R1 = 10kΩ (seri dari AO), R2 = 22kΩ (ke GND)
 //          Vadc = Vsensor × 22/(10+22) ≈ Vsensor × 0.6875
 //          Max: 4.5V × 0.6875 ≈ 3.09V (aman untuk ESP32)
 //   DO   → tidak digunakan
 
-#define TURBIDITY_AO_PIN        32      // GPIO analog input
+#define TURBIDITY_AO_PIN        35      // GPIO analog input
 
 #define TURBIDITY_NUM_SAMPLES   10      // sampel rata-rata untuk noise reduction
 #define TURBIDITY_SAMPLE_INTERVAL 50    // ms antar sampel
@@ -124,4 +101,133 @@
 #define FEED_LEVEL_LOW              25      // % — hampir habis
 #define FEED_LEVEL_CRITICAL         10      // % — kritis/habis
 
+
+// ═════════════════════════════════════════════════════════════
+// 4. FEED GATE — Servo MG996R (Buka/Tutup Lubang Pakan)
+// ═════════════════════════════════════════════════════════════
+// Wiring:
+//   Sinyal (oranye) → GPIO 13 (PWM)
+//   VCC    (merah)  → 5–6V EKSTERNAL (JANGAN dari pin 5V ESP32!)
+//   GND    (coklat) → GND ESP32 (WAJIB common ground)
+//
+// ⚠ PENTING: MG996R bisa menarik arus 1–2A saat start/stall.
+// Jika disuplai langsung dari ESP32, board berisiko restart
+// atau brownout. Gunakan power supply eksternal 5–6V minimal 2A,
+// dan tetap sambungkan GND-nya ke GND ESP32 (common ground).
+ 
+#define SERVO_FEEDER_PIN            13      // GPIO sinyal PWM servo
+ 
+// Sudut servo (derajat) — WAJIB DIKALIBRASI ke mekanisme gerbang
+// fisik Anda. Gunakan sketch test_servo_calibration.txt di folder
+// /test untuk mencari sudut tertutup & terbuka yang pas sebelum
+// mengubah nilai default di bawah ini.
+#define SERVO_ANGLE_CLOSED          0       // derajat — posisi tertutup
+#define SERVO_ANGLE_OPEN            90      // derajat — posisi terbuka
+ 
+// Pulse width (mikrosekon) — range umum yang aman untuk MG996R
+#define SERVO_PULSE_MIN_US          500
+#define SERVO_PULSE_MAX_US          2400
+ 
+// Durasi buka (detik). SERVO_DEFAULT_OPEN_SEC dipakai hanya jika
+// perintah MQTT/app tidak menyertakan field "duration_sec".
+#define SERVO_DEFAULT_OPEN_SEC      3       // detik — default fallback
+#define SERVO_MIN_OPEN_SEC          1       // detik — batas bawah (safety)
+#define SERVO_MAX_OPEN_SEC          30      // detik — batas atas (safety)
+
+
+// ═════════════════════════════════════════════════════════════
+// 5. PH-4502C
+// ═════════════════════════════════════════════════════════════
+// Wiring:
+// VCC          →   5V (VIN)
+// GND          →   GND
+// PO (Analog)  →   GPIO 32 (ADC input-only)
+
+#define PH_PIN                  32      // GPIO analog input
+
+#define PH_NUM_SAMPLES          10      // sampel rata-rata
+#define PH_SAMPLE_INTERVAL      10      // ms antar sampel
+#define PH_READ_INTERVAL        1000    // ms antar pembacaan
+
+#define PH_FILTER_ALPHA         0.15f   // EMA filter (lebih halus)
+
+// Threshold optimal ikan nila
+#define PH_MIN                  6.5f
+#define PH_MAX                  8.5f
+
+// Default kalibrasi (dipakai sebelum kalibrasi manual)
+// Nilai ini AKAN ditimpa setelah kalibrasi disimpan ke NVS
+#define PH_DEFAULT_SLOPE        -5.70f  // volt per pH unit (approx)
+#define PH_DEFAULT_INTERCEPT    21.34f  // intercept
+
+
+// ═════════════════════════════════════════════════════════════
+// 6. FEED GATE — Servo MG996R (Buka/Tutup Lubang Pakan)
+// ═════════════════════════════════════════════════════════════
+// Wiring:
+//   Sinyal (oranye) → GPIO 13 (PWM)
+//   VCC    (merah)  → 5–6V EKSTERNAL (JANGAN dari pin 5V ESP32!)
+//   GND    (coklat) → GND ESP32 (WAJIB common ground)
+//
+// ⚠ PENTING: MG996R bisa menarik arus 1–2A saat start/stall.
+// Jika disuplai langsung dari ESP32, board berisiko restart
+// atau brownout. Gunakan power supply eksternal 5–6V minimal 2A,
+// dan tetap sambungkan GND-nya ke GND ESP32 (common ground).
+ 
+#define SERVO_FEEDER_PIN            13      // GPIO sinyal PWM servo
+ 
+// Sudut servo (derajat) — WAJIB DIKALIBRASI ke mekanisme gerbang
+// fisik Anda. Gunakan sketch test_servo_calibration.txt di folder
+// /test untuk mencari sudut tertutup & terbuka yang pas sebelum
+// mengubah nilai default di bawah ini.
+#define SERVO_ANGLE_CLOSED          0       // derajat — posisi tertutup
+#define SERVO_ANGLE_OPEN            90      // derajat — posisi terbuka
+ 
+// Pulse width (mikrosekon) — range umum yang aman untuk MG996R
+#define SERVO_PULSE_MIN_US          500
+#define SERVO_PULSE_MAX_US          2400
+ 
+// Durasi buka (detik). SERVO_DEFAULT_OPEN_SEC dipakai hanya jika
+// perintah MQTT/app tidak menyertakan field "duration_sec".
+#define SERVO_DEFAULT_OPEN_SEC      3       // detik — default fallback
+#define SERVO_MIN_OPEN_SEC          1       // detik — batas bawah (safety)
+#define SERVO_MAX_OPEN_SEC          30      // detik — batas atas (safety)
+
+
+// ═════════════════════════════════════════════════════════════
+// 4. FEED STIRRER — Relay 2 Channel + Motor Power Window
+// ═════════════════════════════════════════════════════════════
+// Wiring (per channel, motor bisa 2 arah / reversing):
+//   ESP32 GPIO(CH1) → IN1 modul relay 5V
+//   ESP32 GPIO(CH2) → IN2 modul relay 5V
+//   COM1 → Motor Terminal A   | NO1 → Adaptor 12V (+) | NC1 → GND
+//   COM2 → Motor Terminal B   | NO2 → Adaptor 12V (+) | NC2 → GND
+//
+// CH1 & CH2 TIDAK BOLEH aktif bersamaan — sudah dijaga di firmware
+// (Stirrer.cpp selalu mematikan channel lain sebelum mengaktifkan
+// channel yang baru). Arah motor bergantian otomatis setiap kali
+// satu siklus pengadukan selesai.
+//
+// CATATAN: versi ini sengaja TANPA dioda flyback tambahan dulu
+// (keputusan tim: mode prototype/testing). Kontak relay akan lebih
+// cepat aus tanpa proteksi ini — pertimbangkan menambah dioda di
+// kedua terminal motor (ke GND) kalau alat ini dipakai jangka
+// panjang / dipasang permanen.
+//
+// Jadwal (interval & durasi) diubah dari app lewat MQTT topic
+// MQTT_TOPIC_CMD_STIR, disimpan ke NVS (Preferences) agar tetap
+// setelah ESP32 restart.
+ 
+#define STIR_RELAY_CH1_PIN          27      // GPIO ke IN1 (arah A)
+#define STIR_RELAY_CH2_PIN          26      // GPIO ke IN2 (arah B)
+#define STIR_RELAY_ACTIVE_LOW       true    // cek dgn tes nyala/klik — sesuaikan jika ternyata active-HIGH
+ 
+#define STIR_DEFAULT_INTERVAL_MIN   30      // menit antar pengadukan (default sebelum diatur app)
+#define STIR_DEFAULT_DURATION_SEC   10      // detik motor menyala tiap pengadukan (default)
+ 
+// Batas aman supaya app tidak bisa kirim nilai yang merusak motor/relay
+#define STIR_MIN_INTERVAL_MIN       1
+#define STIR_MAX_INTERVAL_MIN       720     // 12 jam
+#define STIR_MIN_DURATION_SEC       1
+#define STIR_MAX_DURATION_SEC       120     // 2 menit
 #endif // CONFIG_H
