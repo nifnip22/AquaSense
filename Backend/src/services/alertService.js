@@ -59,6 +59,7 @@ export async function resolveAlerts(device_id, sensor_type) {
 export async function processAlerts(device_id, reading) {
     const {
         temp_status,     temperature,
+        ph_status,       ph,
         turbidity_status, turbidity_raw,
         feed_status,     feed_level_pct,
     } = reading;
@@ -84,6 +85,29 @@ export async function processAlerts(device_id, reading) {
         });
     } else if (temp_status === 'normal') {
         await resolveAlerts(device_id, 'temperature');
+    }
+
+    // ── PH AIR (PH-420) ──────────────────────────────────────
+    if (ph_status === 'too_high') {
+        await createAlert({
+            device_id, sensor_type: 'ph', severity: 'danger',
+            message: `PH air terlalu tinggi: ${ph} — segera atasi!`,
+            value: ph, unit: 'pH',
+        });
+    } else if (ph_status === 'too_low') {
+        await createAlert({
+            device_id, sensor_type: 'ph', severity: 'warning',
+            message: `PH air terlalu rendah: ${ph} — cek dosing pH!`,
+            value: ph, unit: 'pH',
+        });
+    } else if (ph_status === 'error') {
+        await createAlert({
+            device_id, sensor_type: 'ph', severity: 'danger',
+            message: `Sensor pH error / terputus!`,
+            value: ph, unit: 'pH',
+        });
+    } else if (ph_status === 'normal') {
+        await resolveAlerts(device_id, 'ph');
     }
 
     // ── Turbidity ─────────────────────────────────────────────

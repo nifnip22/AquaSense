@@ -2,8 +2,8 @@
 #define SECRETS_H
 
 // ── WiFi ──────────────────────────────────────────────────────
-#define WIFI_SSID       "renggahalu2"
-#define WIFI_PASSWORD   "renggasigma1"
+#define WIFI_SSID       "Prona Motor"
+#define WIFI_PASSWORD   "u3hmt5kr"   // pastikan ini aman dan tidak dibagikan ke publik!
 
 // ── MQTT Broker ───────────────────────────────────────────────
 // Lokal  : IP address PC/server yang menjalankan Mosquitto
@@ -14,6 +14,6 @@
 #define MQTT_PASSWORD   "Minerva123"   // kosongkan jika tidak pakai auth
 
 // ── Device Identity ───────────────────────────────────────────
-#define MQTT_DEVICE_ID  "ESP32-DEVKIT-01"
+#define MQTT_DEVICE_ID  "ESP32-DEVKIT-01"  // ganti dengan nama unik untuk tiap perangkat
 
 #endif // SECRETS_H

@@ -1,6 +1,8 @@
 #include "mqtt_manager.h"
 #include "secrets.h"
 #include "config.h"
+#include "FeedGate.h"
+#include "Stirrer.h"
 
 #include <WiFiClientSecure.h>
 #include <WiFi.h>
@@ -51,9 +53,8 @@ void mqtt_manager_loop() {
 // feed_level_pct / feed_distance_mm = -1 jika sensor tidak ada
 // ─────────────────────────────────────────────────────────────
 bool mqtt_publish_sensors(float temperature,
+                          float ph,
                           int   turbidity_raw,
-                          float moisture_pct,
-                          int   moisture_raw,
                           float feed_level_pct,
                           int   feed_distance_mm,
                           bool  feed_sensor_ok) {
@@ -65,10 +66,14 @@ bool mqtt_publish_sensors(float temperature,
     JsonDocument doc;
 
     // ── Water sensors ─────────────────────────────────────────
-    doc["temperature"]    = serialized(String(temperature, 2));
+    if (temperature == -999.0f) {
+        Serial.println("[MQTT] ⚠️ Suhu error — temperature dikirim null");
+        doc["temperature"] = nullptr;
+    } else {
+        doc["temperature"] = serialized(String(temperature, 2));
+    }
+    doc["ph"]             = serialized(String(ph, 2));
     doc["turbidity_raw"]  = turbidity_raw;
-    doc["moisture_pct"]   = serialized(String(moisture_pct, 1));
-    doc["moisture_raw"]   = moisture_raw;
 
     // ── Feed level sensor ─────────────────────────────────────
     doc["feed_sensor_ok"] = feed_sensor_ok;
@@ -79,6 +84,13 @@ bool mqtt_publish_sensors(float temperature,
         doc["feed_level_pct"]   = nullptr;
         doc["feed_distance_mm"] = nullptr;
     }
+
+    // ── Feed stirrer status ───────────────────────────────────
+    doc["stir_interval_min"]   = stirrer_get_interval_min();
+    doc["stir_duration_sec"]   = stirrer_get_duration_sec();
+    doc["stir_running"]        = stirrer_is_running();
+    doc["stir_last_direction"] = stirrer_get_last_direction(); // 0 = A, 1 = B
+    doc["stir_next_run_ms"]    = stirrer_get_next_run_in_ms();
 
     // ── Metadata ──────────────────────────────────────────────
     doc["rssi"]      = WiFi.RSSI();
@@ -188,7 +200,43 @@ static void _mqtt_callback(char* topic, byte* payload, unsigned int length) {
         // digitalWrite(PIN_FEEDER_MOTOR, HIGH);
         // delay(duration_sec * 1000);
         // digitalWrite(PIN_FEEDER_MOTOR, LOW);
+        feedGate_openFor((uint16_t)duration_sec);
 
         mqtt_publish_feeding("remote", duration_sec);
+    }
+    else if (strcmp(topic, MQTT_TOPIC_CMD_STIR) == 0) {
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, msg);
+ 
+        if (err) {
+            Serial.println("[MQTT] JSON tidak valid (stir)!");
+            return;
+        }
+ 
+        // Field "mode", "interval_min", "duration_sec", "action" masih USULAN.
+        // Sesuaikan key di bawah ini kalau skema dari BE berbeda.
+        const char* mode = doc["mode"] | "schedule";
+ 
+        if (strcmp(mode, "schedule") == 0) {
+            uint32_t interval = doc["interval_min"] | stirrer_get_interval_min();
+            uint16_t duration = doc["duration_sec"] | stirrer_get_duration_sec();
+            stirrer_set_schedule(interval, duration);
+            Serial.println("[MQTT] 🔄 Jadwal stirrer diupdate dari app.");
+        }
+        else if (strcmp(mode, "manual") == 0) {
+            const char* action = doc["action"] | "";
+            if (strcmp(action, "on") == 0) {
+                stirrer_trigger_now();
+                Serial.println("[MQTT] 🔄 Stirrer ON (manual dari app).");
+            } else if (strcmp(action, "off") == 0) {
+                stirrer_force_stop();
+                Serial.println("[MQTT] 🔄 Stirrer OFF (manual dari app).");
+            } else {
+                Serial.println("[MQTT] ⚠ action manual tidak dikenali.");
+            }
+        }
+        else {
+            Serial.println("[MQTT] ⚠ mode stir tidak dikenali.");
+        }
     }
 }

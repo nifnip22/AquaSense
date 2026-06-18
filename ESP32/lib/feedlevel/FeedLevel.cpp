@@ -134,6 +134,4 @@ void feedLevel_print(const FeedData& data) {
     } else {
         Serial.println("[OK] " + data.status);
     }
-
-    Serial.println("--------------------------------------------");
 }
