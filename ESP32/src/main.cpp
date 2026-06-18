@@ -4,7 +4,6 @@
 #include "turbidity.h"
 #include "FeedLevel.h"
 #include "FeedGate.h"
-#include "stirrer.h"
 #include "ph_sensor.h"
 #include "secrets.h"
 #include "mqtt_manager.h"
@@ -28,7 +27,6 @@ void setup() {
     Serial.println("============================================");
 
     temperature_init();
-    stirrer_init();
     turbiditySetup();
     ph_init();
     ph_calibrate(3.05f, 2.63f);
@@ -65,9 +63,6 @@ void loop() {
     // turbidityLoop() baca + simpan ke state internal
     // Getter dipakai untuk ambil nilai ke MQTT
     turbidityLoop();
-
-    // ── Jalankan jadwal pengaduk pakan (non-blocking) ──────────
-    stirrer_loop();
 
     // ── Baca Level Pakan ──────────────────────────────────────
     if (feedSensorReady && (now - lastFeedRead >= FEED_READ_INTERVAL)) {

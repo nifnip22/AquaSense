@@ -230,4 +230,5 @@
 #define STIR_MAX_INTERVAL_MIN       720     // 12 jam
 #define STIR_MIN_DURATION_SEC       1
 #define STIR_MAX_DURATION_SEC       120     // 2 menit
+
 #endif // CONFIG_H

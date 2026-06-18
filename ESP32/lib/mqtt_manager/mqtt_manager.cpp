@@ -2,7 +2,6 @@
 #include "secrets.h"
 #include "config.h"
 #include "FeedGate.h"
-#include "Stirrer.h"
 #include "mixer.h"
 
 #include <WiFiClientSecure.h>
@@ -86,12 +85,6 @@ bool mqtt_publish_sensors(float temperature,
         doc["feed_distance_mm"] = nullptr;
     }
 
-    // ── Feed stirrer status ───────────────────────────────────
-    doc["stir_interval_min"]   = stirrer_get_interval_min();
-    doc["stir_duration_sec"]   = stirrer_get_duration_sec();
-    doc["stir_running"]        = stirrer_is_running();
-    doc["stir_last_direction"] = stirrer_get_last_direction(); // 0 = A, 1 = B
-    doc["stir_next_run_ms"]    = stirrer_get_next_run_in_ms();
     // ── Mixer status ──────────────────────────────────────────
     doc["mixer_on"]             = mixer_is_on();
     doc["mixer_remaining_sec"]  = mixer_remaining_sec();
@@ -214,41 +207,6 @@ static void _mqtt_callback(char* topic, byte* payload, unsigned int length) {
 
         mqtt_publish_feeding("remote", duration_sec);
     }
-    else if (strcmp(topic, MQTT_TOPIC_CMD_STIR) == 0) {
-        JsonDocument doc;
-        DeserializationError err = deserializeJson(doc, msg);
- 
-        if (err) {
-            Serial.println("[MQTT] JSON tidak valid (stir)!");
-            return;
-        }
- 
-        // Field "mode", "interval_min", "duration_sec", "action" masih USULAN.
-        // Sesuaikan key di bawah ini kalau skema dari BE berbeda.
-        const char* mode = doc["mode"] | "schedule";
- 
-        if (strcmp(mode, "schedule") == 0) {
-            uint32_t interval = doc["interval_min"] | stirrer_get_interval_min();
-            uint16_t duration = doc["duration_sec"] | stirrer_get_duration_sec();
-            stirrer_set_schedule(interval, duration);
-            Serial.println("[MQTT] 🔄 Jadwal stirrer diupdate dari app.");
-        }
-        else if (strcmp(mode, "manual") == 0) {
-            const char* action = doc["action"] | "";
-            if (strcmp(action, "on") == 0) {
-                stirrer_trigger_now();
-                Serial.println("[MQTT] 🔄 Stirrer ON (manual dari app).");
-            } else if (strcmp(action, "off") == 0) {
-                stirrer_force_stop();
-                Serial.println("[MQTT] 🔄 Stirrer OFF (manual dari app).");
-            } else {
-                Serial.println("[MQTT] ⚠ action manual tidak dikenali.");
-            }
-        }
-        else {
-            Serial.println("[MQTT] ⚠ mode stir tidak dikenali.");
-        }
-    }
     else if (strcmp(topic, MQTT_TOPIC_CMD_MIXER) == 0) {
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, msg);
@@ -257,25 +215,31 @@ static void _mqtt_callback(char* topic, byte* payload, unsigned int length) {
             Serial.println("[MQTT] JSON tidak valid (mixer)!");
             return;
         }
-
-        const char* action = doc["action"] | "";
+        bool is_on = doc["is_on"] | false;
         uint16_t duration_min = doc["duration_min"] | 5;
 
-        if (strcmp(action, "on") == 0) {
+        if (is_on) {
             mixer_turn_on(duration_min);
             Serial.printf("[MQTT] 🔀 Mixer ON selama %d menit (manual dari app).\n", duration_min);
-        }
-        else if (strcmp(action, "off") == 0) {
+        } else {
             mixer_turn_off();
             Serial.println("[MQTT] 🔀 Mixer OFF (manual dari app).");
         }
-        else {
-            Serial.println("[MQTT] ⚠ action mixer tidak dikenali.");
-        }
     }
     else if (strcmp(topic, MQTT_TOPIC_CMD_MIXER_SCHEDULES) == 0) {
-        // msg sudah berupa JSON array: [{"time":"08:00","duration_min":15},...]
-        mixer_set_schedules(String(msg));
+        // Backend mengirim { "schedules": [{"time":"08:00","duration_min":15},...] }
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, msg);
+
+        if (err || !doc["schedules"].is<JsonArray>()) {
+            Serial.println("[MQTT] JSON tidak valid (mixer_schedules)!");
+            return;
+        }
+
+        // Ekstrak array schedules lalu kirim ke mixer sebagai string JSON array
+        String schedulesJson;
+        serializeJson(doc["schedules"], schedulesJson);
+        mixer_set_schedules(schedulesJson);
         Serial.println("[MQTT] 🔀 Jadwal mixer diupdate dari app.");
     }
 }
