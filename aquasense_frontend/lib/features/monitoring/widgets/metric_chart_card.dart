@@ -18,6 +18,7 @@ class MetricChartCard extends StatelessWidget {
   final String statsBox2Title;
   final String statsBox2Value;
   final bool isStatsValue2Text;
+  final Color? statsBox2ValueColor;
 
   const MetricChartCard({
     super.key,
@@ -36,6 +37,7 @@ class MetricChartCard extends StatelessWidget {
     required this.statsBox2Title,
     required this.statsBox2Value,
     this.isStatsValue2Text = false,
+    this.statsBox2ValueColor,
   });
 
   @override
@@ -136,9 +138,11 @@ class MetricChartCard extends StatelessWidget {
                   statsBox2Title,
                   statsBox2Value,
                   isStatsValue2Text,
-                  valueColor: isStatsValue2Text
-                      ? Colors.teal
-                      : const Color(0xFF003355),
+                  valueColor:
+                      statsBox2ValueColor ??
+                      (isStatsValue2Text
+                          ? Colors.teal
+                          : const Color(0xFF003355)),
                 ),
               ),
             ],
@@ -176,7 +180,7 @@ class MetricChartCard extends StatelessWidget {
           Text(
             value,
             style: isTextValue
-                ? GoogleFonts.plusJakartaSans(
+                ? GoogleFonts.epilogue(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: valueColor ?? const Color(0xFF003355),
@@ -184,7 +188,7 @@ class MetricChartCard extends StatelessWidget {
                 : GoogleFonts.epilogue(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF003355),
+                    color: valueColor ?? const Color(0xFF003355), 
                   ),
           ),
         ],
