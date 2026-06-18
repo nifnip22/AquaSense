@@ -1,64 +1,84 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/schedule_model.dart';
 
 class ScheduleProvider extends ChangeNotifier {
-  // Default values
-  bool _isMorningActive = true;
-  bool _isAfternoonActive = true;
-  bool _isNightActive = false;
-  double _feedDuration = 3.0;
+  final _supabase = Supabase.instance.client;
+  
+  List<ScheduleModel> _schedules = [];
+  bool _isLoading = false;
 
-  // Getter
-  bool get isMorningActive => _isMorningActive;
-  bool get isAfternoonActive => _isAfternoonActive;
-  bool get isNightActive => _isNightActive;
-  double get feedDuration => _feedDuration;
+  List<ScheduleModel> get schedules => _schedules;
+  bool get isLoading => _isLoading;
 
   ScheduleProvider() {
-    _loadScheduleData();
+    fetchSchedules();
   }
 
-  // Function to load schedule data from local storage when the app is opened
-  Future<void> _loadScheduleData() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    _isMorningActive = prefs.getBool('morning_active') ?? true;
-    _isAfternoonActive = prefs.getBool('afternoon_active') ?? true;
-    _isNightActive = prefs.getBool('night_active') ?? false;
-    _feedDuration = prefs.getDouble('feed_duration') ?? 3.0;
-    
+  Future<void> fetchSchedules() async {
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      final response = await _supabase
+          .from('feeding_schedules')
+          .select()
+          .order('schedule_time', ascending: true);
+
+      _schedules = response.map((json) => ScheduleModel.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('Gagal mengambil jadwal: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  // Function to toggle morning schedule
-  Future<void> toggleMorning(bool value) async {
-    _isMorningActive = value;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('morning_active', value);
+  Future<bool> addSchedule(TimeOfDay time, int durationSec) async {
+    try {
+      final newSchedule = ScheduleModel(time: time, durationSec: durationSec);
+      await _supabase.from('feeding_schedules').insert(newSchedule.toJson());
+      await fetchSchedules();
+      return true;
+    } catch (e) {
+      debugPrint('Gagal menambah jadwal: $e');
+      return false;
+    }
   }
 
-  // Function to toggle afternoon schedule
-  Future<void> toggleAfternoon(bool value) async {
-    _isAfternoonActive = value;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('afternoon_active', value);
+  Future<void> toggleScheduleStatus(int scheduleId, bool currentStatus) async {
+    try {
+      final index = _schedules.indexWhere((s) => s.id == scheduleId);
+      if (index != -1) {
+        final old = _schedules[index];
+        _schedules[index] = ScheduleModel(
+          id: old.id,
+          time: old.time,
+          durationSec: old.durationSec,
+          isActive: !currentStatus,
+        );
+        notifyListeners();
+      }
+
+      await _supabase
+          .from('feeding_schedules')
+          .update({'is_active': !currentStatus})
+          .eq('id', scheduleId);
+
+    } catch (e) {
+      debugPrint('Gagal mengubah status jadwal: $e');
+      fetchSchedules();
+    }
   }
 
-  // Function to toggle night schedule
-  Future<void> toggleNight(bool value) async {
-    _isNightActive = value;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('night_active', value);
-  }
-
-  // Function to save feeding duration (called when the slider is released)
-  Future<void> saveFeedDuration(double value) async {
-    _feedDuration = value;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('feed_duration', value);
+  Future<void> deleteSchedule(int scheduleId) async {
+    try {
+      _schedules.removeWhere((s) => s.id == scheduleId);
+      notifyListeners();
+      await _supabase.from('feeding_schedules').delete().eq('id', scheduleId);
+    } catch (e) {
+      debugPrint('Gagal menghapus jadwal: $e');
+      fetchSchedules();
+    }
   }
 }

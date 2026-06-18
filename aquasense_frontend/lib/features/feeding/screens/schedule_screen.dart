@@ -1,117 +1,196 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/widgets/custom_app_bar.dart';
-import '../widgets/schedule_toggle_card.dart';
-import '../widgets/feed_quantity_card.dart';
-import '../widgets/intelligence_settings_card.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
 import '../providers/schedule_provider.dart';
+import '../widgets/feed_quantity_card.dart';
 
-class ScheduleScreen extends StatelessWidget {
+class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
 
   @override
+  State<ScheduleScreen> createState() => _ScheduleScreenState();
+}
+
+class _ScheduleScreenState extends State<ScheduleScreen> {
+  int _defaultDuration = 5;
+
+  @override
   Widget build(BuildContext context) {
-    // 4. Membaca status/state dari provider
-    final scheduleState = context.watch<ScheduleProvider>();
+    final scheduleProvider = context.watch<ScheduleProvider>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: const CustomAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Section
-            Text(
-              'Smart Schedule',
-              style: GoogleFonts.epilogue(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF003355),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Optimize the biological health of your river farm with precision timing.',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                color: Colors.black54,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
+      body: scheduleProvider.isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF003355)))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- Header & Add Button ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Smart Schedule',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF003355),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle, color: Color(0xFF003355), size: 32),
+                        onPressed: () => _showAddScheduleDialog(context, scheduleProvider),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // --- Dynamic List for Schedules ---
+                  if (scheduleProvider.schedules.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Text(
+                        'Belum ada jadwal pakan.\nTekan tombol + untuk menambah.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(color: Colors.grey),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: scheduleProvider.schedules.length,
+                      itemBuilder: (context, index) {
+                        final schedule = scheduleProvider.schedules[index];
+                        return _buildMinimalistScheduleCard(schedule, scheduleProvider);
+                      },
+                    ),
 
-            Row(
+                  const SizedBox(height: 32),
+                  
+                  // --- Default Duration Slider ---
+                  FeedQuantityCard(
+                    currentDuration: _defaultDuration,
+                    onChanged: (val) {
+                      setState(() {
+                        _defaultDuration = val.toInt();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildMinimalistScheduleCard(dynamic schedule, ScheduleProvider provider) {
+    final timeString = schedule.time.format(context);
+    
+    return Dismissible(
+      key: Key(schedule.id.toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        alignment: Alignment.centerRight,
+        child: const Icon(Icons.delete_sweep, color: Colors.red, size: 28),
+      ),
+      onDismissed: (_) {
+        provider.deleteSchedule(schedule.id!);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.restaurant, color: Color(0xFF003355), size: 20),
-                const SizedBox(width: 8),
                 Text(
-                  'Feeding Schedule',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
+                  timeString,
+                  style: GoogleFonts.epilogue(
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF003355),
+                    color: schedule.isActive ? const Color(0xFF003355) : Colors.grey.shade400,
+                  ),
+                ),
+                Text(
+                  'Motor duration: ${schedule.durationSec}s',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black45,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            ScheduleToggleCard(
-              time: '08:00 AM',
-              label: 'MORNING FEED',
-              isActive: scheduleState.isMorningActive,
-              onChanged: (val) => context.read<ScheduleProvider>().toggleMorning(val),
+            Switch(
+              value: schedule.isActive,
+              activeThumbColor: const Color(0xFF0288D1),
+              onChanged: (val) {
+                provider.toggleScheduleStatus(schedule.id!, schedule.isActive);
+              },
             ),
-            const SizedBox(height: 12),
-            ScheduleToggleCard(
-              time: '04:00 PM',
-              label: 'AFTERNOON FEED',
-              isActive: scheduleState.isAfternoonActive,
-              onChanged: (val) => context.read<ScheduleProvider>().toggleAfternoon(val),
-            ),
-            const SizedBox(height: 12),
-            ScheduleToggleCard(
-              time: '10:00 PM',
-              label: 'NIGHT FEED',
-              isActive: scheduleState.isNightActive,
-              onChanged: (val) => context.read<ScheduleProvider>().toggleNight(val),
-            ),
-            const SizedBox(height: 16),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF003355),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
-                onPressed: () {},
-                icon: const Icon(Icons.add),
-                label: const Text('ADD NEW SCHEDULE', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            const FeedQuantityCard(),
-            const SizedBox(height: 24),
-            
-            const IntelligenceSettingsCard(),
-            
-            /* -- IMAGE FEATURE TEMPORARY COMMAND --
-            const SizedBox(height: 24),
-            _buildZoneImageCard(),
-            */
-            
-            const SizedBox(height: 32),
           ],
         ),
       ),
     );
+  }
+
+  // Logic for showing time picker and adding schedule
+  Future<void> _showAddScheduleDialog(BuildContext context, ScheduleProvider provider) async {
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: Color(0xFF003355)),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedTime != null) {
+      await provider.addSchedule(pickedTime, _defaultDuration);
+      if (mounted) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Jadwal pakan berhasil ditambahkan'),
+            backgroundColor: const Color(0xFF0288D1),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
   }
 }

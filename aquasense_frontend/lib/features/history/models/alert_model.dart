@@ -16,13 +16,23 @@ class AlertModel {
   });
 
   factory AlertModel.fromJson(Map<String, dynamic> json) {
+    String sensorName = json['sensor_type']?.toString().toUpperCase() ?? 'SYSTEM';
+    String generatedTitle = "$sensorName ALERT";
+
+    String alertType = 'SYSTEM';
+    if (json['severity'] == 'danger') {
+      alertType = 'ALERT';
+    } else if (json['severity'] == 'warning') {
+      alertType = 'WARNING';
+    }
+
     return AlertModel(
       id: json['id'],
       createdAt: DateTime.parse(json['created_at']),
-      type: json['type'],
-      title: json['title'],
-      description: json['description'] ?? '',
-      isResolved: json['is_resolved'] ?? false,
+      type: alertType,
+      title: generatedTitle,
+      description: json['message'] ?? 'No description provided.',
+      isResolved: json['resolved'] ?? false,
     );
   }
 }
