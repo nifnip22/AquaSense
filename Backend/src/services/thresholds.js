@@ -1,7 +1,7 @@
 // src/services/thresholds.js
 // ─────────────────────────────────────────────────────────────
 // Threshold values — HARUS sinkron dengan ESP32/include/config.h
-// Sensors: DS18B20 (temperature) | TSW-20M (turbidity) | VL53L0X (feed)
+// Sensors: DS18B20 (temperature) | PH-420 (ph) | TSW-20M (turbidity) | VL53L0X (feed)
 // ─────────────────────────────────────────────────────────────
 
 // ── Temperature — DS18B20 ─────────────────────────────────────
@@ -9,6 +9,12 @@
 export const TEMP = {
     MIN: 25.0,  // °C — sinkron config.h TEMP_MIN
     MAX: 30.0,  // °C — sinkron config.h TEMP_MAX
+};
+
+// ── PH AIR — PH-420 ──────────────────────────────────────────
+export const PH = {
+    MIN: 6.5,  // pH — sinkron config.h PH_MIN
+    MAX: 8.5,  // pH — sinkron config.h PH_MAX
 };
 
 // ── Turbidity — TSW-20M (RAW ADC 0–4095) ─────────────────────
@@ -52,6 +58,17 @@ export function evaluateTurbidity(raw) {
     if (raw >= TURBIDITY.RAW_OPTIMAL_MIN && raw <= TURBIDITY.RAW_OPTIMAL_MAX)            return 'optimal';
     if (raw >  TURBIDITY.RAW_WARNING_MAX && raw <  TURBIDITY.RAW_OPTIMAL_MIN)            return 'warning';
     return 'danger'; // raw <= RAW_WARNING_MAX
+}
+
+// ─────────────────────────────────────────────────────────────
+// Evaluasi pH air
+// Return: 'acidic' | 'alkaline' | 'normal' | 'error'
+// ─────────────────────────────────────────────────────────────
+export function evaluatePh(ph) {
+    if (ph === null || ph === undefined || ph === -999) return 'error';
+    if (ph < PH.MIN) return 'too_low';
+    if (ph > PH.MAX) return 'too_high';
+    return 'normal';
 }
 
 // ─────────────────────────────────────────────────────────────

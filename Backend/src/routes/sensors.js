@@ -80,6 +80,7 @@ app.get('/stats', async (c) => {
         count: data.length,
         stats: {
             temperature:   calc(data, 'temperature'),
+            ph:              calc(data, 'ph'),
             turbidity_raw: calc(data, 'turbidity_raw'),  // ADC 0–4095
             feed_level_pct: calc(data, 'feed_level_pct'), // %
         },

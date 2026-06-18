@@ -1,10 +1,10 @@
 -- ╔══════════════════════════════════════════════════════════════╗
 -- ║          AquaSense — Supabase Database Schema                ║
--- ║  Sensors: DS18B20 (Temp) | TSW-20M (Turbidity RAW ADC)     ║
+-- ║  Sensors: DS18B20 (Temp) | TSW-20M (Turbidity RAW ADC)       ║
 -- ║           VL53L0X (Feed Level)                               ║
 -- ║                                                              ║
--- ║  Cara pakai: Jalankan SELURUH file ini di Supabase →        ║
--- ║  SQL Editor → New Query → Paste → Run                       ║
+-- ║  Cara pakai: Jalankan SELURUH file ini di Supabase →         ║
+-- ║  SQL Editor → New Query → Paste → Run                        ║
 -- ╚══════════════════════════════════════════════════════════════╝
 
 
@@ -25,6 +25,7 @@
 --    Kolom yang ada sesuai dengan payload MQTT dari ESP32:
 --    {
 --      "temperature":      27.50,   ← DS18B20
+--      "ph":               7.0,     ← PH-420
 --      "turbidity_raw":    1200,    ← TSW-20M ADC 0-4095
 --      "feed_sensor_ok":   true,    ← VL53L0X status
 --      "feed_level_pct":   65.3,    ← VL53L0X level %
@@ -44,6 +45,11 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
     temperature  NUMERIC(5,2),
     temp_status  TEXT,
     -- temp_status enum: 'normal' | 'too_cold' | 'too_hot' | 'error'
+
+    -- ── PH AIR — PH-420 ──────────────────────────────────────
+    ph          NUMERIC(4,2),
+    ph_status   TEXT,
+    -- ph_status enum: 'normal' | 'too_low' | 'too_high' | 'error'
 
     -- ── Turbidity — TSW-20M (RAW ADC) ─────────────────────
     -- ADC 12-bit ESP32: 0–4095
@@ -104,7 +110,7 @@ CREATE TABLE IF NOT EXISTS alerts (
 
     -- Tipe sensor yang memicu alert
     sensor_type  TEXT         NOT NULL,
-    -- sensor_type enum: 'temperature' | 'turbidity' | 'feed_level'
+    -- sensor_type enum: 'temperature' | 'ph' | 'turbidity' | 'feed_level'
 
     -- Tingkat keparahan
     severity     TEXT         NOT NULL,
@@ -116,7 +122,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     -- Nilai sensor saat alert dipicu
     value        NUMERIC,
     unit         TEXT,
-    -- unit: '°C' | 'ADC' | '%'
+    -- unit: '°C' | 'ADC' | '%' | 'pH'
 
     -- Status resolusi
     resolved     BOOLEAN      NOT NULL DEFAULT FALSE,
@@ -136,7 +142,7 @@ ALTER TABLE alerts
 
 ALTER TABLE alerts
     ADD CONSTRAINT chk_sensor_type
-    CHECK (sensor_type IN ('temperature', 'turbidity', 'feed_level'));
+    CHECK (sensor_type IN ('temperature', 'ph', 'turbidity', 'feed_level'));
 
 
 -- ═════════════════════════════════════════════════════════════
@@ -184,6 +190,9 @@ SELECT DISTINCT ON (device_id)
     -- Temperature
     temperature,
     temp_status,
+    -- PH Air
+    ph,
+    ph_status,
     -- Turbidity
     turbidity_raw,
     turbidity_status,

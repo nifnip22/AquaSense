@@ -2,7 +2,7 @@
 import mqtt from 'mqtt';
 import 'dotenv/config';
 import { supabase } from '../db/supabase.js';
-import { evaluateTemp, evaluateTurbidity, evaluateFeedLevel } from '../services/thresholds.js';
+import { evaluateTemp, evaluatePh, evaluateTurbidity, evaluateFeedLevel } from '../services/thresholds.js';
 import { processAlerts } from '../services/alertService.js';
 
 const BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
@@ -82,6 +82,7 @@ async function handleMessage(topic, payload) {
 // ─────────────────────────────────────────────────────────────
 async function handleSensorData(device_id, raw) {
     const temp_status      = evaluateTemp(raw.temperature);
+    const ph_status        = evaluatePh(raw.ph);
     const turbidity_status = evaluateTurbidity(raw.turbidity_raw);
     const feed_status      = raw.feed_sensor_ok
         ? evaluateFeedLevel(raw.feed_level_pct)
@@ -94,6 +95,10 @@ async function handleSensorData(device_id, raw) {
         // ── Temperature (DS18B20) ──
         temperature:  raw.temperature  ?? null,
         temp_status,
+
+        // ── PH AIR (PH-420) ──
+        ph:        raw.ph        ?? null,
+        ph_status,
 
         // ── Turbidity (TSW-20M) — RAW ADC only ──
         turbidity_raw:    raw.turbidity_raw    ?? null,
@@ -122,6 +127,7 @@ async function handleSensorData(device_id, raw) {
     console.log(
         `[Supabase] ✅ Tersimpan | ` +
         `Temp: ${raw.temperature}°C (${temp_status}) | ` +
+        `PH: ${raw.ph} (${ph_status}) | ` +
         `TurbRAW: ${raw.turbidity_raw} (${turbidity_status}) | ` +
         `Feed: ${raw.feed_level_pct}% (${feed_status})`
     );
