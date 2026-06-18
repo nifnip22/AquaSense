@@ -9,26 +9,51 @@ class FeedLevelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLow = currentLevel < 20.0;
+    final mainColor = isLow ? const Color(0xFFD32F2F) : const Color(0xFFFF9800);
+    final badgeBgColor = isLow ? const Color(0xFFFFEBEE) : const Color(0xFFFFF3E0);
+    final badgeTextColor = isLow ? const Color(0xFFC62828) : const Color(0xFFE65100);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.grey.shade300, width: 2),
+        border: Border.all(color: mainColor.withValues(alpha: 0.3), width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.inventory_2, color: Color(0xFF455A64), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Feed Level',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF003355),
+              Row(
+                children: [
+                  Icon(Icons.inventory_2, color: mainColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Feed Level',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF003355),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isLow ? 'LOW STOCK' : 'STOCKED',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: badgeTextColor,
+                  ),
                 ),
               ),
             ],
@@ -64,7 +89,7 @@ class FeedLevelCard extends StatelessWidget {
                     ],
                     isCurved: false,
                     isStepLineChart: true,
-                    color: Colors.grey.shade400,
+                    color: mainColor.withValues(alpha: 0.4),
                     barWidth: 2,
                     dotData: const FlDotData(show: false),
                   ),
@@ -103,7 +128,7 @@ class FeedLevelCard extends StatelessWidget {
                         value: currentLevel / 100,
                         strokeWidth: 8,
                         backgroundColor: Colors.white,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF007B83)),
+                        valueColor: AlwaysStoppedAnimation<Color>(mainColor),
                       ),
                     ),
                     Text(
@@ -140,11 +165,11 @@ class FeedLevelCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '2 days',
+                  isLow ? 'ASAP' : '2 days',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF003355),
+                    color: isLow ? const Color(0xFFD32F2F) : const Color(0xFF003355),
                   ),
                 ),
               ],

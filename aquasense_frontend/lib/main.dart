@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/monitoring/providers/sensor_provider.dart';
+import 'features/feeding/providers/mixer_provider.dart';
 import 'features/settings/providers/settings_provider.dart';
 
 void main() async {
@@ -30,6 +31,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SensorProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => ScheduleProvider()),
+        ChangeNotifierProvider(create: (_) => MixerProvider()),
       ],
       child: const AquaSenseApp(),
     ),
