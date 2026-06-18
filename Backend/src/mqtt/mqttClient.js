@@ -48,6 +48,72 @@ export function startMqttClient() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Publish functions — dipakai dari routes
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Kirim perintah feeding ke ESP32
+ * Topic  : aquasense/{device_id}/command/feed
+ * Payload: { "duration_sec": N }
+ */
+export function publishFeedCommand(device_id, duration_sec) {
+    if (!client?.connected) {
+        console.warn('[MQTT] Tidak terhubung, gagal kirim command feed.');
+        return false;
+    }
+    const topic   = `aquasense/${device_id}/command/feed`;
+    const payload = JSON.stringify({ duration_sec });
+    client.publish(topic, payload, { qos: 1 });
+    console.log(`[MQTT] 🐟 Feed command → ${topic} | ${payload}`);
+    return true;
+}
+
+/**
+ * Kirim perintah ON/OFF mixer ke ESP32
+ * Topic  : aquasense/{device_id}/command/mixer
+ * Payload: { "is_on": true, "duration_min": 15 }
+ *          { "is_on": false }
+ */
+export function publishMixerCommand(device_id, is_on, duration_min = 0) {
+    if (!client?.connected) {
+        console.warn('[MQTT] Tidak terhubung, gagal kirim command mixer.');
+        return false;
+    }
+    const topic   = `aquasense/${device_id}/command/mixer`;
+    const payload = JSON.stringify(
+        is_on ? { is_on: true, duration_min } : { is_on: false }
+    );
+    client.publish(topic, payload, { qos: 1 });
+    console.log(`[MQTT] 🔄 Mixer command → ${topic} | ${payload}`);
+    return true;
+}
+
+/**
+ * Sync semua jadwal mixer aktif ke ESP32
+ * Topic  : aquasense/{device_id}/command/mixer_schedules
+ * Payload: {
+ *   "schedules": [
+ *     { "time": "08:00", "duration_min": 15 },
+ *     { "time": "14:00", "duration_min": 10 }
+ *   ]
+ * }
+ *
+ * ESP32 akan replace seluruh jadwal internalnya dengan list ini.
+ * Array kosong = hapus semua jadwal.
+ */
+export function publishMixerSchedules(device_id, schedules) {
+    if (!client?.connected) {
+        console.warn('[MQTT] Tidak terhubung, gagal sync jadwal mixer.');
+        return false;
+    }
+    const topic   = `aquasense/${device_id}/command/mixer_schedules`;
+    const payload = JSON.stringify({ schedules });
+    client.publish(topic, payload, { qos: 1 });
+    console.log(`[MQTT] 📅 Mixer schedules → ${topic} | ${schedules.length} jadwal`);
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────
 async function handleMessage(topic, payload) {
     let data;
     try {
@@ -69,9 +135,11 @@ async function handleMessage(topic, payload) {
 
 // ─────────────────────────────────────────────────────────────
 // handleSensorData()
-// Payload dari ESP32:
+//
+// Payload dari ESP32 (mqtt_manager.cpp):
 // {
 //   "temperature":      27.50,
+//   "ph":               7.20,
 //   "turbidity_raw":    1200,
 //   "feed_sensor_ok":   true,
 //   "feed_level_pct":   65.3,
@@ -92,25 +160,20 @@ async function handleSensorData(device_id, raw) {
         device_id,
         recorded_at: new Date().toISOString(),
 
-        // ── Temperature (DS18B20) ──
         temperature:  raw.temperature  ?? null,
         temp_status,
 
-        // ── PH AIR (PH-420) ──
         ph:        raw.ph        ?? null,
         ph_status,
 
-        // ── Turbidity (TSW-20M) — RAW ADC only ──
         turbidity_raw:    raw.turbidity_raw    ?? null,
         turbidity_status,
 
-        // ── Feed Level (VL53L0X) ──
         feed_level_pct:   raw.feed_sensor_ok ? (raw.feed_level_pct   ?? null) : null,
         feed_distance_mm: raw.feed_sensor_ok ? (raw.feed_distance_mm ?? null) : null,
         feed_sensor_ok:   raw.feed_sensor_ok  ?? false,
         feed_status,
 
-        // ── Metadata ──
         rssi:      raw.rssi      ?? null,
         uptime_ms: raw.uptime_ms ?? null,
     };

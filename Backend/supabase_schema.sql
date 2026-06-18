@@ -1,7 +1,10 @@
 -- ╔══════════════════════════════════════════════════════════════╗
 -- ║          AquaSense — Supabase Database Schema                ║
--- ║  Sensors: DS18B20 (Temp) | TSW-20M (Turbidity RAW ADC)       ║
--- ║           VL53L0X (Feed Level)                               ║
+-- ║  Sensors : DS18B20 (Temp) | PH-4502C (pH) |                ║
+-- ║            TSW-20M (Turbidity RAW ADC) |                    ║
+-- ║            VL53L0X (Feed Level)                             ║
+-- ║  Actuators: Servo MG996R (Feed Gate) |                      ║
+-- ║             Relay 2CH + Motor (Stirrer)                      ║
 -- ║                                                              ║
 -- ║  Cara pakai: Jalankan SELURUH file ini di Supabase →         ║
 -- ║  SQL Editor → New Query → Paste → Run                        ║
@@ -22,16 +25,21 @@
 -- 1. TABEL: sensor_readings
 --    Menyimpan semua data pembacaan sensor dari ESP32 DevKit V1
 --
---    Kolom yang ada sesuai dengan payload MQTT dari ESP32:
+--    Payload MQTT terbaru dari ESP32 (mqtt_manager.cpp):
 --    {
---      "temperature":      27.50,   ← DS18B20
---      "ph":               7.0,     ← PH-420
---      "turbidity_raw":    1200,    ← TSW-20M ADC 0-4095
---      "feed_sensor_ok":   true,    ← VL53L0X status
---      "feed_level_pct":   65.3,    ← VL53L0X level %
---      "feed_distance_mm": 450,     ← VL53L0X jarak mm
---      "rssi":             -65,     ← WiFi signal
---      "uptime_ms":        123456   ← ESP32 uptime
+--      "temperature":        27.50,   ← DS18B20
+--      "ph":                 7.20,    ← PH-4502C
+--      "turbidity_raw":      1200,    ← TSW-20M ADC 0–4095
+--      "feed_sensor_ok":     true,    ← VL53L0X status
+--      "feed_level_pct":     65.3,    ← VL53L0X level %
+--      "feed_distance_mm":   450,     ← VL53L0X jarak mm
+--      "stir_interval_min":  30,      ← jadwal stirrer (menit)
+--      "stir_duration_sec":  10,      ← durasi stirrer (detik)
+--      "stir_running":       false,   ← status motor saat ini
+--      "stir_last_direction":0,       ← arah terakhir (0=A, 1=B)
+--      "stir_next_run_ms":   1234567, ← ms hingga jadwal berikutnya
+--      "rssi":               -65,     ← WiFi signal
+--      "uptime_ms":          123456   ← ESP32 uptime
 --    }
 -- ═════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS sensor_readings (
@@ -46,9 +54,9 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
     temp_status  TEXT,
     -- temp_status enum: 'normal' | 'too_cold' | 'too_hot' | 'error'
 
-    -- ── PH AIR — PH-420 ──────────────────────────────────────
-    ph          NUMERIC(4,2),
-    ph_status   TEXT,
+    -- ── PH AIR — PH-4502C ────────────────────────────────────
+    ph           NUMERIC(4,2),
+    ph_status    TEXT,
     -- ph_status enum: 'normal' | 'too_low' | 'too_high' | 'error'
 
     -- ── Turbidity — TSW-20M (RAW ADC) ─────────────────────
@@ -60,16 +68,22 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
     -- turbidity_status enum: 'optimal' | 'too_clear' | 'warning' | 'danger' | 'unknown'
 
     -- ── Feed Level — VL53L0X ToF ───────────────────────────
-    -- Sensor dipasang di ATAS wadah, menghadap ke bawah
-    -- feed_sensor_ok = false jika VL53L0X tidak terdeteksi saat boot
     feed_sensor_ok   BOOLEAN     DEFAULT FALSE,
-    feed_level_pct   NUMERIC(5,2),          -- Persentase level pakan (0–100%)
-    feed_distance_mm INTEGER,               -- Jarak sensor ke permukaan pakan (mm)
+    feed_level_pct   NUMERIC(5,2),
+    feed_distance_mm INTEGER,
     feed_status      TEXT,
     -- feed_status enum: 'full' | 'adequate' | 'low' | 'critical' | 'empty' | 'unknown'
 
+    -- ── Stirrer — Relay 2CH + Motor Power Window ───────────
+    -- Status & konfigurasi pengaduk pakan dikirim setiap publish sensor
+    stir_interval_min   INTEGER,    -- jadwal interval (menit), sesuai NVS ESP32
+    stir_duration_sec   INTEGER,    -- durasi motor aktif (detik), sesuai NVS ESP32
+    stir_running        BOOLEAN,    -- true jika motor sedang berjalan saat publish
+    stir_last_direction SMALLINT,   -- 0 = arah A (CH1), 1 = arah B (CH2)
+    stir_next_run_ms    BIGINT,     -- ms tersisa hingga pengadukan berikutnya (0 = segera)
+
     -- ── Metadata ESP32 ─────────────────────────────────────
-    rssi       INTEGER,   -- WiFi signal strength (dBm), biasanya -30 sampai -90
+    rssi       INTEGER,   -- WiFi signal strength (dBm)
     uptime_ms  BIGINT     -- Waktu ESP32 aktif sejak boot (ms)
 );
 
@@ -80,51 +94,64 @@ CREATE INDEX IF NOT EXISTS idx_sensor_readings_recorded_at
 CREATE INDEX IF NOT EXISTS idx_sensor_readings_device_id
     ON sensor_readings (device_id, recorded_at DESC);
 
--- Constraint: temperature harus dalam range sensor yang masuk akal
--- (-55 sampai 125 adalah range DS18B20)
+-- Constraint suhu range DS18B20 (-55 s.d. 125°C)
 ALTER TABLE sensor_readings
     ADD CONSTRAINT chk_temperature
     CHECK (temperature IS NULL OR temperature BETWEEN -55 AND 125);
 
--- Constraint: ADC 12-bit ESP32
+-- Constraint ADC 12-bit ESP32
 ALTER TABLE sensor_readings
     ADD CONSTRAINT chk_turbidity_raw
     CHECK (turbidity_raw IS NULL OR turbidity_raw BETWEEN 0 AND 4095);
 
--- Constraint: persentase pakan 0–100
+-- Constraint persentase pakan 0–100
 ALTER TABLE sensor_readings
     ADD CONSTRAINT chk_feed_level_pct
     CHECK (feed_level_pct IS NULL OR feed_level_pct BETWEEN 0 AND 100);
+
+-- Constraint stirrer direction: hanya 0 atau 1
+ALTER TABLE sensor_readings
+    ADD CONSTRAINT chk_stir_last_direction
+    CHECK (stir_last_direction IS NULL OR stir_last_direction IN (0, 1));
+
+
+-- ═════════════════════════════════════════════════════════════
+-- MIGRASI (jika tabel sudah ada, jalankan ALTER TABLE ini)
+-- Uncomment jika perlu menambah kolom stirrer ke tabel existing:
+-- ═════════════════════════════════════════════════════════════
+-- ALTER TABLE sensor_readings
+--     ADD COLUMN IF NOT EXISTS stir_interval_min   INTEGER,
+--     ADD COLUMN IF NOT EXISTS stir_duration_sec   INTEGER,
+--     ADD COLUMN IF NOT EXISTS stir_running        BOOLEAN,
+--     ADD COLUMN IF NOT EXISTS stir_last_direction SMALLINT,
+--     ADD COLUMN IF NOT EXISTS stir_next_run_ms    BIGINT;
+--
+-- ALTER TABLE sensor_readings
+--     ADD CONSTRAINT chk_stir_last_direction
+--     CHECK (stir_last_direction IS NULL OR stir_last_direction IN (0, 1));
 
 
 -- ═════════════════════════════════════════════════════════════
 -- 2. TABEL: alerts
 --    Log alert otomatis berdasarkan threshold sensor
---    Dibuat otomatis oleh backend (alertService.js)
---    Tidak duplikat dalam 10 menit untuk kondisi yang sama
 -- ═════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS alerts (
     id           BIGSERIAL    PRIMARY KEY,
     device_id    TEXT         NOT NULL DEFAULT 'ESP32-DEVKIT-01',
     created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
-    -- Tipe sensor yang memicu alert
     sensor_type  TEXT         NOT NULL,
     -- sensor_type enum: 'temperature' | 'ph' | 'turbidity' | 'feed_level'
 
-    -- Tingkat keparahan
     severity     TEXT         NOT NULL,
     -- severity enum: 'warning' | 'danger'
 
-    -- Pesan deskriptif untuk ditampilkan di dashboard
     message      TEXT         NOT NULL,
 
-    -- Nilai sensor saat alert dipicu
     value        NUMERIC,
     unit         TEXT,
     -- unit: '°C' | 'ADC' | '%' | 'pH'
 
-    -- Status resolusi
     resolved     BOOLEAN      NOT NULL DEFAULT FALSE,
     resolved_at  TIMESTAMPTZ
 );
@@ -148,21 +175,16 @@ ALTER TABLE alerts
 -- ═════════════════════════════════════════════════════════════
 -- 3. TABEL: feeding_logs
 --    Log setiap kejadian pemberian pakan
---    Dipublikasikan oleh ESP32 via MQTT topic .../feeding
---    Atau di-trigger manual via API POST /api/feeding
 -- ═════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS feeding_logs (
     id           BIGSERIAL    PRIMARY KEY,
     device_id    TEXT         NOT NULL DEFAULT 'ESP32-DEVKIT-01',
     fed_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
-    -- Sumber trigger pemberian pakan
     trigger_type TEXT         NOT NULL,
     -- trigger_type enum: 'scheduled' | 'manual' | 'remote' | 'auto'
 
-    -- Berapa lama motor feeder aktif
     duration_sec INTEGER,
-
     notes        TEXT
 );
 
@@ -179,8 +201,7 @@ ALTER TABLE feeding_logs
 
 -- ═════════════════════════════════════════════════════════════
 -- 4. VIEW: latest_readings
---    Data terbaru dari setiap device
---    Dipakai oleh GET /api/sensors/latest
+--    Data terbaru dari setiap device — dipakai GET /api/sensors/latest
 -- ═════════════════════════════════════════════════════════════
 CREATE OR REPLACE VIEW latest_readings AS
 SELECT DISTINCT ON (device_id)
@@ -201,6 +222,12 @@ SELECT DISTINCT ON (device_id)
     feed_level_pct,
     feed_distance_mm,
     feed_status,
+    -- Stirrer
+    stir_interval_min,
+    stir_duration_sec,
+    stir_running,
+    stir_last_direction,
+    stir_next_run_ms,
     -- Metadata
     rssi,
     uptime_ms
@@ -210,14 +237,11 @@ ORDER BY device_id, recorded_at DESC;
 
 -- ═════════════════════════════════════════════════════════════
 -- 5. ROW LEVEL SECURITY (RLS)
---    Backend menggunakan service_role_key → akses penuh
---    Frontend (jika ada) harus gunakan anon key + RLS policy
 -- ═════════════════════════════════════════════════════════════
 ALTER TABLE sensor_readings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alerts          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feeding_logs    ENABLE ROW LEVEL SECURITY;
 
--- Service role (backend) punya akses penuh ke semua tabel
 CREATE POLICY "service_role_all" ON sensor_readings
     FOR ALL USING (auth.role() = 'service_role');
 
@@ -228,7 +252,6 @@ CREATE POLICY "service_role_all" ON feeding_logs
     FOR ALL USING (auth.role() = 'service_role');
 
 -- Opsional: izinkan anon membaca data (untuk dashboard publik)
--- Uncomment jika diperlukan:
 -- CREATE POLICY "anon_read_sensors" ON sensor_readings
 --     FOR SELECT USING (auth.role() = 'anon');
 -- CREATE POLICY "anon_read_alerts" ON alerts
@@ -239,7 +262,6 @@ CREATE POLICY "service_role_all" ON feeding_logs
 
 -- ═════════════════════════════════════════════════════════════
 -- 6. VERIFIKASI SCHEMA
---    Jalankan query ini untuk memastikan semua tabel terbuat
 -- ═════════════════════════════════════════════════════════════
 -- SELECT table_name, column_name, data_type
 -- FROM information_schema.columns

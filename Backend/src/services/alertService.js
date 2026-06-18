@@ -54,14 +54,14 @@ export async function resolveAlerts(device_id, sensor_type) {
 // ─────────────────────────────────────────────────────────────
 // processAlerts()
 // Dipanggil setiap kali data sensor masuk dari MQTT.
-// Sensor yang dievaluasi: temperature | turbidity | feed_level
+// Sensor yang dievaluasi: temperature | ph | turbidity | feed_level
 // ─────────────────────────────────────────────────────────────
 export async function processAlerts(device_id, reading) {
     const {
-        temp_status,     temperature,
-        ph_status,       ph,
+        temp_status,      temperature,
+        ph_status,        ph,
         turbidity_status, turbidity_raw,
-        feed_status,     feed_level_pct,
+        feed_status,      feed_level_pct,
     } = reading;
 
     // ── Temperature ──────────────────────────────────────────
@@ -87,7 +87,7 @@ export async function processAlerts(device_id, reading) {
         await resolveAlerts(device_id, 'temperature');
     }
 
-    // ── PH AIR (PH-420) ──────────────────────────────────────
+    // ── PH AIR (PH-4502C) ────────────────────────────────────
     if (ph_status === 'too_high') {
         await createAlert({
             device_id, sensor_type: 'ph', severity: 'danger',

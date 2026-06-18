@@ -3,6 +3,7 @@
 #include "config.h"
 #include "FeedGate.h"
 #include "Stirrer.h"
+#include "mixer.h"
 
 #include <WiFiClientSecure.h>
 #include <WiFi.h>
@@ -91,7 +92,10 @@ bool mqtt_publish_sensors(float temperature,
     doc["stir_running"]        = stirrer_is_running();
     doc["stir_last_direction"] = stirrer_get_last_direction(); // 0 = A, 1 = B
     doc["stir_next_run_ms"]    = stirrer_get_next_run_in_ms();
-
+    // ── Mixer status ──────────────────────────────────────────
+    doc["mixer_on"]             = mixer_is_on();
+    doc["mixer_remaining_sec"]  = mixer_remaining_sec();
+    doc["mixer_schedule_count"] = mixer_schedule_count();
     // ── Metadata ──────────────────────────────────────────────
     doc["rssi"]      = WiFi.RSSI();
     doc["uptime_ms"] = millis();
@@ -166,6 +170,12 @@ static void _mqtt_connect() {
             Serial.println("[MQTT] ✅ Terhubung ke broker!");
             mqttClient.subscribe(MQTT_TOPIC_CMD_FEED);
             Serial.printf("[MQTT] 📡 Subscribe: %s\n", MQTT_TOPIC_CMD_FEED);
+            mqttClient.subscribe(MQTT_TOPIC_CMD_STIR);
+            Serial.printf("[MQTT] 📡 Subscribe: %s\n", MQTT_TOPIC_CMD_STIR);
+            mqttClient.subscribe(MQTT_TOPIC_CMD_MIXER);
+            Serial.printf("[MQTT] 📡 Subscribe: %s\n", MQTT_TOPIC_CMD_MIXER);
+            mqttClient.subscribe(MQTT_TOPIC_CMD_MIXER_SCHEDULES);
+            Serial.printf("[MQTT] 📡 Subscribe: %s\n", MQTT_TOPIC_CMD_MIXER_SCHEDULES);
         } else {
             Serial.printf("[MQTT] ❌ Gagal (rc=%d) Wifi=%d IP=%s, retry %d/3...\n",
                           mqttClient.state(), WiFi.status(), WiFi.localIP().toString().c_str(), retries + 1);
@@ -238,5 +248,34 @@ static void _mqtt_callback(char* topic, byte* payload, unsigned int length) {
         else {
             Serial.println("[MQTT] ⚠ mode stir tidak dikenali.");
         }
+    }
+    else if (strcmp(topic, MQTT_TOPIC_CMD_MIXER) == 0) {
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, msg);
+
+        if (err) {
+            Serial.println("[MQTT] JSON tidak valid (mixer)!");
+            return;
+        }
+
+        const char* action = doc["action"] | "";
+        uint16_t duration_min = doc["duration_min"] | 5;
+
+        if (strcmp(action, "on") == 0) {
+            mixer_turn_on(duration_min);
+            Serial.printf("[MQTT] 🔀 Mixer ON selama %d menit (manual dari app).\n", duration_min);
+        }
+        else if (strcmp(action, "off") == 0) {
+            mixer_turn_off();
+            Serial.println("[MQTT] 🔀 Mixer OFF (manual dari app).");
+        }
+        else {
+            Serial.println("[MQTT] ⚠ action mixer tidak dikenali.");
+        }
+    }
+    else if (strcmp(topic, MQTT_TOPIC_CMD_MIXER_SCHEDULES) == 0) {
+        // msg sudah berupa JSON array: [{"time":"08:00","duration_min":15},...]
+        mixer_set_schedules(String(msg));
+        Serial.println("[MQTT] 🔀 Jadwal mixer diupdate dari app.");
     }
 }

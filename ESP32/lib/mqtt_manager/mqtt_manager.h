@@ -8,6 +8,8 @@
 #define MQTT_TOPIC_FEEDING  "aquasense/" MQTT_DEVICE_ID "/feeding"
 #define MQTT_TOPIC_CMD_FEED "aquasense/" MQTT_DEVICE_ID "/command/feed"
 #define MQTT_TOPIC_CMD_STIR "aquasense/" MQTT_DEVICE_ID "/command/stir"
+#define MQTT_TOPIC_CMD_MIXER "aquasense/" MQTT_DEVICE_ID "/command/mixer"
+#define MQTT_TOPIC_CMD_MIXER_SCHEDULES "aquasense/" MQTT_DEVICE_ID "/command/mixer_schedules"
 
 // ── Format payload MQTT_TOPIC_CMD_STIR (USULAN — konfirmasi ke BE) ─
 // Mode jadwal:

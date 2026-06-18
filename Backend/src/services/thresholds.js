@@ -1,26 +1,30 @@
 // src/services/thresholds.js
 // ─────────────────────────────────────────────────────────────
 // Threshold values — HARUS sinkron dengan ESP32/include/config.h
-// Sensors: DS18B20 (temperature) | PH-420 (ph) | TSW-20M (turbidity) | VL53L0X (feed)
+// Sensors: DS18B20 (temperature) | PH-4502C (ph) | TSW-20M (turbidity) | VL53L0X (feed)
+// Actuators: Servo MG996R (feed gate) | Relay 2CH (stirrer)
 // ─────────────────────────────────────────────────────────────
 
 // ── Temperature — DS18B20 ─────────────────────────────────────
 // Optimal ikan nila: 25–30°C
+// Sinkron: config.h TEMP_MIN / TEMP_MAX
 export const TEMP = {
-    MIN: 25.0,  // °C — sinkron config.h TEMP_MIN
-    MAX: 30.0,  // °C — sinkron config.h TEMP_MAX
+    MIN: 25.0,  // °C
+    MAX: 30.0,  // °C
 };
 
-// ── PH AIR — PH-420 ──────────────────────────────────────────
+// ── PH AIR — PH-4502C ────────────────────────────────────────
+// Optimal ikan nila: 6.5–8.5
+// Sinkron: config.h PH_MIN / PH_MAX
 export const PH = {
-    MIN: 6.5,  // pH — sinkron config.h PH_MIN
-    MAX: 8.5,  // pH — sinkron config.h PH_MAX
+    MIN: 6.5,
+    MAX: 8.5,
 };
 
 // ── Turbidity — TSW-20M (RAW ADC 0–4095) ─────────────────────
 // Makin TINGGI raw → makin JERNIH
 // Makin RENDAH raw → makin KERUH
-// Sinkron config.h TURBIDITY_RAW_*
+// Sinkron: config.h TURBIDITY_RAW_*
 export const TURBIDITY = {
     RAW_CLEAR_MIN:    2100,  // >= ini → terlalu jernih
     RAW_OPTIMAL_MAX:  2000,  // batas atas optimal
@@ -29,16 +33,25 @@ export const TURBIDITY = {
 };
 
 // ── Feed Level — VL53L0X (%) ──────────────────────────────────
-// Sinkron config.h FEED_LEVEL_*
+// Sinkron: config.h FEED_LEVEL_*
 export const FEED = {
-    FULL:     75,  // % — penuh
-    ADEQUATE: 50,  // % — cukup
-    LOW:      25,  // % — hampir habis
-    CRITICAL: 10,  // % — kritis, segera isi
+    FULL:     75,  // %
+    ADEQUATE: 50,  // %
+    LOW:      25,  // %
+    CRITICAL: 10,  // %
+};
+
+// ── Stirrer (motor pengaduk pakan) ────────────────────────────
+// Batas jadwal yang aman — sinkron config.h STIR_*
+export const STIR = {
+    MIN_INTERVAL_MIN:  1,
+    MAX_INTERVAL_MIN:  720,  // 12 jam
+    MIN_DURATION_SEC:  1,
+    MAX_DURATION_SEC:  120,  // 2 menit
 };
 
 // ─────────────────────────────────────────────────────────────
-// Evaluasi Suhu
+// evaluateTemp()
 // Return: 'normal' | 'too_cold' | 'too_hot' | 'error'
 // ─────────────────────────────────────────────────────────────
 export function evaluateTemp(celsius) {
@@ -49,20 +62,8 @@ export function evaluateTemp(celsius) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Evaluasi Turbiditas (RAW ADC)
-// Return: 'optimal' | 'too_clear' | 'warning' | 'danger' | 'unknown'
-// ─────────────────────────────────────────────────────────────
-export function evaluateTurbidity(raw) {
-    if (raw === null || raw === undefined) return 'unknown';
-    if (raw >= TURBIDITY.RAW_CLEAR_MIN)                                                  return 'too_clear';
-    if (raw >= TURBIDITY.RAW_OPTIMAL_MIN && raw <= TURBIDITY.RAW_OPTIMAL_MAX)            return 'optimal';
-    if (raw >  TURBIDITY.RAW_WARNING_MAX && raw <  TURBIDITY.RAW_OPTIMAL_MIN)            return 'warning';
-    return 'danger'; // raw <= RAW_WARNING_MAX
-}
-
-// ─────────────────────────────────────────────────────────────
-// Evaluasi pH air
-// Return: 'acidic' | 'alkaline' | 'normal' | 'error'
+// evaluatePh()
+// Return: 'normal' | 'too_low' | 'too_high' | 'error'
 // ─────────────────────────────────────────────────────────────
 export function evaluatePh(ph) {
     if (ph === null || ph === undefined || ph === -999) return 'error';
@@ -72,7 +73,19 @@ export function evaluatePh(ph) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Evaluasi Level Pakan (%)
+// evaluateTurbidity()
+// Return: 'optimal' | 'too_clear' | 'warning' | 'danger' | 'unknown'
+// ─────────────────────────────────────────────────────────────
+export function evaluateTurbidity(raw) {
+    if (raw === null || raw === undefined) return 'unknown';
+    if (raw >= TURBIDITY.RAW_CLEAR_MIN)                                                          return 'too_clear';
+    if (raw >= TURBIDITY.RAW_OPTIMAL_MIN && raw <= TURBIDITY.RAW_OPTIMAL_MAX)                    return 'optimal';
+    if (raw >  TURBIDITY.RAW_WARNING_MAX && raw <  TURBIDITY.RAW_OPTIMAL_MIN)                    return 'warning';
+    return 'danger'; // raw <= RAW_WARNING_MAX
+}
+
+// ─────────────────────────────────────────────────────────────
+// evaluateFeedLevel()
 // Return: 'full' | 'adequate' | 'low' | 'critical' | 'empty' | 'unknown'
 // ─────────────────────────────────────────────────────────────
 export function evaluateFeedLevel(pct) {
@@ -82,4 +95,19 @@ export function evaluateFeedLevel(pct) {
     if (pct > FEED.LOW)      return 'low';
     if (pct > FEED.CRITICAL) return 'critical';
     return 'empty';
+}
+
+// ─────────────────────────────────────────────────────────────
+// validateStirSchedule()
+// Validasi parameter jadwal stirrer sebelum dikirim ke ESP32.
+// Return: { valid: true } | { valid: false, reason: string }
+// ─────────────────────────────────────────────────────────────
+export function validateStirSchedule(interval_min, duration_sec) {
+    if (!Number.isInteger(interval_min) || interval_min < STIR.MIN_INTERVAL_MIN || interval_min > STIR.MAX_INTERVAL_MIN) {
+        return { valid: false, reason: `interval_min harus integer antara ${STIR.MIN_INTERVAL_MIN}–${STIR.MAX_INTERVAL_MIN}` };
+    }
+    if (!Number.isInteger(duration_sec) || duration_sec < STIR.MIN_DURATION_SEC || duration_sec > STIR.MAX_DURATION_SEC) {
+        return { valid: false, reason: `duration_sec harus integer antara ${STIR.MIN_DURATION_SEC}–${STIR.MAX_DURATION_SEC}` };
+    }
+    return { valid: true };
 }

@@ -1,7 +1,7 @@
 # AquaSense Backend
 
 Node.js backend untuk sistem monitoring akuakultur AquaSense.
-Stack: **Express** + **MQTT** + **Supabase**
+Stack: **Express (Hono)** + **MQTT** + **Supabase**
 
 ---
 
@@ -10,20 +10,24 @@ Stack: **Express** + **MQTT** + **Supabase**
 ```
 aquasense-backend/
 ├── src/
-│   ├── index.js                  ← Entry point (Express + MQTT)
+│   ├── index.js                  ← Entry point (Hono + MQTT)
 │   ├── db/
 │   │   └── supabase.js           ← Supabase client
 │   ├── mqtt/
 │   │   └── mqttClient.js         ← Subscribe & proses data ESP32
+│   │                                + publish command ke ESP32
 │   ├── services/
 │   │   ├── thresholds.js         ← Konstanta threshold (sinkron config.h)
 │   │   └── alertService.js       ← Auto-alert engine
 │   └── routes/
 │       ├── sensors.js            ← GET /api/sensors/*
 │       ├── alerts.js             ← GET/PATCH /api/alerts/*
-│       └── feeding.js            ← GET/POST /api/feeding
+│       ├── feeding.js            ← GET/POST /api/feeding
+│       └── stirrer.js            ← POST /api/stirrer/schedule|manual  ← BARU
+├── scripts/
+│   └── dummy-publish.js          ← Simulasi ESP32 (test backend)
 ├── supabase_schema.sql           ← Schema tabel Supabase
-├── .env.example                  ← Template environment variables
+├── .env.example
 └── package.json
 ```
 
@@ -40,15 +44,13 @@ npm install
 
 ### 2. Konfigurasi .env
 
-```bash
-cp .env.example .env
-```
-
-Isi file `.env`:
 ```env
 SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
-MQTT_BROKER_URL=mqtt://localhost:1883
+MQTT_BROKER_URL=mqtts://xxxx.hivemq.cloud:8883
+MQTT_USERNAME=AquaSense
+MQTT_PASSWORD=yourpassword
+MQTT_CLIENT_ID=BackendAquaSense
 PORT=3000
 ```
 
@@ -56,21 +58,10 @@ PORT=3000
 
 Buka **Supabase → SQL Editor**, jalankan `supabase_schema.sql`.
 
-### 4. Setup MQTT Broker (Mosquitto lokal)
+> Jika tabel `sensor_readings` **sudah ada**, jalankan hanya bagian MIGRASI
+> (bagian ALTER TABLE di dalam komentar schema) untuk menambah kolom stirrer.
 
-```bash
-# Install Mosquitto
-sudo apt install mosquitto mosquitto-clients
-
-# Jalankan
-sudo systemctl start mosquitto
-```
-
-Atau gunakan cloud broker:
-- **HiveMQ**: `mqtt://broker.hivemq.com:1883`
-- **EMQX**: `mqtt://broker.emqx.io:1883`
-
-### 5. Jalankan Backend
+### 4. Jalankan Backend
 
 ```bash
 npm run dev     # development (nodemon)
@@ -81,33 +72,53 @@ npm start       # production
 
 ## 📡 MQTT Topics
 
-### ESP32 → Backend (Publish dari ESP32)
+### ESP32 → Backend (Subscribe)
 
 | Topic | Deskripsi |
 |-------|-----------|
-| `aquasense/{device_id}/sensors` | Data semua sensor |
-| `aquasense/{device_id}/feeding` | Event feeding |
+| `aquasense/{device_id}/sensors` | Data semua sensor + stirrer status |
+| `aquasense/{device_id}/feeding` | Event feeding dari ESP32 |
 
-**Contoh payload `sensors`:**
+**Payload `sensors` (terbaru):**
 ```json
 {
-  "temperature": 27.5,
-  "turbidity_ntu": 2400.0,
-  "turbidity_volt": 2.140,
-  "turbidity_raw": 2654,
-  "moisture_pct": 62.3,
-  "moisture_raw": 1820,
-  "rssi": -65,
-  "uptime_ms": 123456
+  "temperature":        27.50,
+  "ph":                 7.20,
+  "turbidity_raw":      1200,
+  "feed_sensor_ok":     true,
+  "feed_level_pct":     65.3,
+  "feed_distance_mm":   450,
+  "stir_interval_min":  30,
+  "stir_duration_sec":  10,
+  "stir_running":       false,
+  "stir_last_direction": 0,
+  "stir_next_run_ms":   1234567,
+  "rssi":               -65,
+  "uptime_ms":          123456
 }
 ```
 
-**Contoh payload `feeding`:**
+### Backend → ESP32 (Publish)
+
+| Topic | Deskripsi |
+|-------|-----------|
+| `aquasense/{device_id}/command/feed` | Perintah buka gate pakan |
+| `aquasense/{device_id}/command/stir` | Update jadwal / kontrol manual stirrer |
+
+**Payload `command/feed`:**
 ```json
-{
-  "trigger_type": "scheduled",
-  "duration_sec": 5
-}
+{ "duration_sec": 5 }
+```
+
+**Payload `command/stir` — mode jadwal:**
+```json
+{ "mode": "schedule", "interval_min": 30, "duration_sec": 10 }
+```
+
+**Payload `command/stir` — mode manual:**
+```json
+{ "mode": "manual", "action": "on" }
+{ "mode": "manual", "action": "off" }
 ```
 
 ---
@@ -118,9 +129,9 @@ npm start       # production
 
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| GET | `/api/sensors/latest` | Data terbaru per device |
+| GET | `/api/sensors/latest` | Data terbaru per device (termasuk stirrer status) |
 | GET | `/api/sensors/history?device_id=&limit=50` | Riwayat pembacaan |
-| GET | `/api/sensors/stats?period=24h` | Statistik min/max/avg |
+| GET | `/api/sensors/stats?period=24h` | Statistik min/max/avg + stirrer config |
 
 ### Alerts
 
@@ -134,7 +145,31 @@ npm start       # production
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
 | GET | `/api/feeding` | Riwayat feeding |
-| POST | `/api/feeding` | Trigger feeding manual |
+| POST | `/api/feeding` | Trigger feeding manual (publish MQTT → ESP32) |
+
+### Stirrer ← BARU
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| POST | `/api/stirrer/schedule` | Update jadwal pengadukan |
+| POST | `/api/stirrer/manual` | Kontrol ON/OFF manual |
+
+**Body `POST /api/stirrer/schedule`:**
+```json
+{
+  "device_id":    "ESP32-DEVKIT-01",
+  "interval_min": 30,
+  "duration_sec": 10
+}
+```
+
+**Body `POST /api/stirrer/manual`:**
+```json
+{
+  "device_id": "ESP32-DEVKIT-01",
+  "action":    "on"
+}
+```
 
 ### Health Check
 
@@ -144,50 +179,38 @@ GET /health
 
 ---
 
-## 🔧 Integrasi ESP32
-
-Tambahkan library **ArduinoJson** + **PubSubClient** ke `platformio.ini`:
-
-```ini
-lib_deps =
-    paulstoffregen/OneWire @ ^2.3.8
-    milesburton/DallasTemperature @ ^3.11.0
-    bblanchon/ArduinoJson @ ^7.0.0
-    knolleary/PubSubClient @ ^2.8
-```
-
-Contoh publish dari `main.cpp`:
-```cpp
-#include <WiFi.h>
-#include <PubSubClient.h>
-#include <ArduinoJson.h>
-
-// Setelah baca semua sensor:
-StaticJsonDocument<256> doc;
-doc["temperature"]    = suhu;
-doc["turbidity_ntu"]  = turbidityNTU;
-doc["turbidity_volt"] = voltage;
-doc["turbidity_raw"]  = rawADC;
-doc["moisture_pct"]   = kelembapan;
-doc["rssi"]           = WiFi.RSSI();
-doc["uptime_ms"]      = millis();
-
-char payload[256];
-serializeJson(doc, payload);
-mqttClient.publish("aquasense/ESP32-DEVKIT-01/sensors", payload);
-```
-
----
-
 ## 🚨 Auto Alert System
-
-Backend otomatis membuat alert ke tabel `alerts` jika:
 
 | Sensor | Kondisi | Severity |
 |--------|---------|----------|
 | Temperature | < 25°C atau > 30°C | warning |
-| Turbidity | < 1600 NTU atau > 4200 NTU | warning |
-| Turbidity | > 4550 NTU | danger |
-| Moisture | < 40% | warning |
+| Temperature | sensor error (-999) | danger |
+| pH | < 6.5 | warning |
+| pH | > 8.5 | danger |
+| pH | sensor error | danger |
+| Turbidity | ADC 801–899 | warning |
+| Turbidity | ADC ≤ 800 | danger |
+| Turbidity | ADC ≥ 2100 | warning (too_clear) |
+| Feed Level | ≤ 25% | warning |
+| Feed Level | ≤ 10% | warning (critical) |
+| Feed Level | 0% | danger (empty) |
 
 Alert tidak duplikat dalam 10 menit untuk kondisi yang sama.
+
+---
+
+## 🧪 Test dengan Dummy Publisher
+
+```bash
+# Kirim satu payload (verifikasi cepat)
+node scripts/dummy-publish.js --once
+
+# Loop setiap 3 detik, 10 kali
+node scripts/dummy-publish.js --count 10 --interval 3000
+
+# Loop terus + sertakan feeding event setiap 30 detik
+node scripts/dummy-publish.js --include-feeding
+
+# Ganti device ID
+node scripts/dummy-publish.js --device-id ESP32-DEVKIT-02
+```

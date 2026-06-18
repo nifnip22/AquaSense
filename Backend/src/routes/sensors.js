@@ -56,7 +56,7 @@ app.get('/stats', async (c) => {
 
     const { data, error } = await supabase
         .from('sensor_readings')
-        .select('temperature, turbidity_raw, feed_level_pct')
+        .select('temperature, ph, turbidity_raw, feed_level_pct, stir_interval_min, stir_duration_sec')
         .eq('device_id', device_id)
         .gte('recorded_at', from);
 
@@ -74,16 +74,23 @@ app.get('/stats', async (c) => {
         };
     };
 
+    // Ambil nilai stirrer terbaru (bukan avg — ini config, bukan sensor)
+    const latestStir = [...data].reverse().find(r => r.stir_interval_min !== null);
+
     return c.json({
         period,
         device_id,
         count: data.length,
         stats: {
-            temperature:   calc(data, 'temperature'),
-            ph:              calc(data, 'ph'),
-            turbidity_raw: calc(data, 'turbidity_raw'),  // ADC 0–4095
-            feed_level_pct: calc(data, 'feed_level_pct'), // %
+            temperature:    calc(data, 'temperature'),
+            ph:             calc(data, 'ph'),
+            turbidity_raw:  calc(data, 'turbidity_raw'),
+            feed_level_pct: calc(data, 'feed_level_pct'),
         },
+        stirrer_config: latestStir ? {
+            interval_min: latestStir.stir_interval_min,
+            duration_sec: latestStir.stir_duration_sec,
+        } : null,
     });
 });
 
