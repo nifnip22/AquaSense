@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/monitoring/providers/sensor_provider.dart';
 import 'features/feeding/providers/mixer_provider.dart';
 import 'features/settings/providers/settings_provider.dart';
+import 'shared/widgets/network_monitor.dart';
 
 void main() async {
   // Make sure Flutter bindings are initialized before we do anything else, especially before we load environment variables or initialize Supabase.
@@ -55,6 +56,9 @@ class AquaSenseApp extends StatelessWidget {
           Theme.of(context).textTheme,
         ),
       ),
+      builder: (context, child) {
+        return NetworkMonitor(child: child!);
+      },
       home: const MainScreen(),
     );
   }
