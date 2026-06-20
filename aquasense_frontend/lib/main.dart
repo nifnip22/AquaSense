@@ -1,5 +1,6 @@
 import 'package:aquasense_frontend/features/dashboard/screens/main_screen.dart';
 import 'package:aquasense_frontend/features/feeding/providers/schedule_provider.dart';
+import 'package:aquasense_frontend/features/history/providers/history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -32,6 +33,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => ScheduleProvider()),
         ChangeNotifierProvider(create: (_) => MixerProvider()),
+        ChangeNotifierProvider(create: (_) => HistoryProvider()),
       ],
       child: const AquaSenseApp(),
     ),
