@@ -5,6 +5,29 @@ import { publishMixerCommand, publishMixerSchedules } from '../mqtt/mqttClient.j
 
 const app = new Hono();
 
+// #region agent log
+import { appendFileSync } from 'fs';
+import { join } from 'path';
+const DEBUG_LOG_PATH = join(process.cwd(), '../Arduino/ESP32/debug-fafb2e.log');
+function _agentLog(location, message, data = {}, hypothesisId = 'D', runId = 'pre-fix') {
+    const entry = {
+        sessionId: 'fafb2e',
+        runId,
+        hypothesisId,
+        location,
+        message,
+        data,
+        timestamp: Date.now(),
+    };
+    try { appendFileSync(DEBUG_LOG_PATH, JSON.stringify(entry) + '\n'); } catch {}
+    fetch('http://127.0.0.1:7573/ingest/61263a7c-8ce0-4bf4-9952-f0bafbdf00fd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fafb2e' },
+        body: JSON.stringify(entry),
+    }).catch(() => {});
+}
+// #endregion
+
 // ─────────────────────────────────────────────────────────────
 // Helper: ambil semua jadwal aktif lalu sync ke ESP32
 // Dipanggil setiap kali jadwal berubah (create/update/delete)
@@ -68,6 +91,15 @@ app.post('/control', async (c) => {
 
     // Kirim MQTT command ke ESP32
     const mqtt_sent = publishMixerCommand(device_id, is_on, is_on ? duration_min : 0);
+
+    // #region agent log
+    _agentLog('mixer.js:control', 'POST /api/mixer/control handled', {
+        device_id,
+        is_on,
+        duration_min,
+        mqtt_sent,
+    }, mqtt_sent ? 'B' : 'C');
+    // #endregion
 
     // Update mixer_status di DB (upsert — baris id=1 selalu ada)
     const { data, error } = await supabase
