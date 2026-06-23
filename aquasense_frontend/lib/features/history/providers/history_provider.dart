@@ -78,7 +78,7 @@ class HistoryProvider extends ChangeNotifier {
   }
 
   Future<bool> activateHardwareAction(String sensorType) async {
-    final String deviceId = 'AS-BPN-001'; 
+    final String deviceId = 'ESP32-DEVKIT-01'; 
     try {
       await _supabase.from('mixer_status').upsert({
         'id': 1, 

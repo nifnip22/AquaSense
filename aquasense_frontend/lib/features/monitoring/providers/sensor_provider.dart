@@ -171,7 +171,7 @@ class SensorProvider extends ChangeNotifier {
     _isDispensing = true;
     notifyListeners();
 
-    final String deviceId = 'AS-BPN-001';
+    final String deviceId = 'ESP32-DEVKIT-01';
     
     try {
       await _supabase.from('feeder_status').upsert({

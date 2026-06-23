@@ -27,7 +27,7 @@ class DeviceInfoCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Device ID: AS-BPN-001', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
+                    Text('Device ID: ESP32-DEVKIT-01', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
                     const SizedBox(height: 6),
                     Row(
                       children: [

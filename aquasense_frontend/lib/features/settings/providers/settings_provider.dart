@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
-  final String _deviceId = 'AS-BPN-001';
+  final String _deviceId = 'ESP32-DEVKIT-01';
 
   // Default values
   bool _isEcoModeActive = false;
