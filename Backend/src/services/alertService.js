@@ -60,7 +60,8 @@ export async function processAlerts(device_id, reading) {
     const {
         temp_status,      temperature,
         ph_status,        ph,
-        turbidity_status, turbidity_raw,
+        // ✅ Ganti turbidity_raw → turbidity_filtered sesuai field DB dan payload ESP32
+        turbidity_status, turbidity_filtered,
         feed_status,      feed_level_pct,
     } = reading;
 
@@ -68,42 +69,42 @@ export async function processAlerts(device_id, reading) {
     if (temp_status === 'too_hot') {
         await createAlert({
             device_id, sensor_type: 'temperature', severity: 'warning',
-            message: `Suhu terlalu tinggi: ${temperature}°C (batas max 30°C)`,
+            message: `Suhu terlalu tinggi: ${temperature}°C (batas max ${process.env.TEMP_MAX ?? 30}°C)`,
             value: temperature, unit: '°C',
         });
     } else if (temp_status === 'too_cold') {
         await createAlert({
             device_id, sensor_type: 'temperature', severity: 'warning',
-            message: `Suhu terlalu rendah: ${temperature}°C (batas min 25°C)`,
+            message: `Suhu terlalu rendah: ${temperature}°C (batas min ${process.env.TEMP_MIN ?? 25}°C)`,
             value: temperature, unit: '°C',
         });
     } else if (temp_status === 'error') {
         await createAlert({
             device_id, sensor_type: 'temperature', severity: 'danger',
-            message: `Sensor suhu error / terputus!`,
+            message: 'Sensor suhu error / terputus!',
             value: temperature, unit: '°C',
         });
     } else if (temp_status === 'normal') {
         await resolveAlerts(device_id, 'temperature');
     }
 
-    // ── PH AIR (PH-4502C) ────────────────────────────────────
+    // ── pH Air ───────────────────────────────────────────────
     if (ph_status === 'too_high') {
         await createAlert({
             device_id, sensor_type: 'ph', severity: 'danger',
-            message: `PH air terlalu tinggi: ${ph} — segera atasi!`,
+            message: `pH air terlalu tinggi: ${ph} — segera atasi!`,
             value: ph, unit: 'pH',
         });
     } else if (ph_status === 'too_low') {
         await createAlert({
             device_id, sensor_type: 'ph', severity: 'warning',
-            message: `PH air terlalu rendah: ${ph} — cek dosing pH!`,
+            message: `pH air terlalu rendah: ${ph} — cek dosing pH!`,
             value: ph, unit: 'pH',
         });
     } else if (ph_status === 'error') {
         await createAlert({
             device_id, sensor_type: 'ph', severity: 'danger',
-            message: `Sensor pH error / terputus!`,
+            message: 'Sensor pH error / terputus!',
             value: ph, unit: 'pH',
         });
     } else if (ph_status === 'normal') {
@@ -111,23 +112,24 @@ export async function processAlerts(device_id, reading) {
     }
 
     // ── Turbidity ─────────────────────────────────────────────
+    // ✅ Semua referensi ke turbidity_raw diganti turbidity_filtered
     if (turbidity_status === 'danger') {
         await createAlert({
             device_id, sensor_type: 'turbidity', severity: 'danger',
-            message: `Air terlalu keruh: ADC ${turbidity_raw} — segera ganti/filter air!`,
-            value: turbidity_raw, unit: 'ADC',
+            message: `Air terlalu keruh: ADC ${turbidity_filtered} — segera ganti/filter air!`,
+            value: turbidity_filtered, unit: 'ADC',
         });
     } else if (turbidity_status === 'warning') {
         await createAlert({
             device_id, sensor_type: 'turbidity', severity: 'warning',
-            message: `Kekeruhan air perlu dimonitor: ADC ${turbidity_raw}`,
-            value: turbidity_raw, unit: 'ADC',
+            message: `Kekeruhan air perlu dimonitor: ADC ${turbidity_filtered}`,
+            value: turbidity_filtered, unit: 'ADC',
         });
     } else if (turbidity_status === 'too_clear') {
         await createAlert({
             device_id, sensor_type: 'turbidity', severity: 'warning',
-            message: `Air terlalu jernih: ADC ${turbidity_raw} — cek aerasi & plankton`,
-            value: turbidity_raw, unit: 'ADC',
+            message: `Air terlalu jernih: ADC ${turbidity_filtered} — cek aerasi & plankton`,
+            value: turbidity_filtered, unit: 'ADC',
         });
     } else if (turbidity_status === 'optimal') {
         await resolveAlerts(device_id, 'turbidity');

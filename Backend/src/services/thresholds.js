@@ -9,16 +9,22 @@
 // Optimal ikan nila: 25–30°C
 // Sinkron: config.h TEMP_MIN / TEMP_MAX
 export const TEMP = {
-    MIN: 25.0,  // °C
-    MAX: 30.0,  // °C
+    MIN: 26.0,
+    MAX: 32.0,
+    KRITIS_MIN: 14.0,
+    KRITIS_MAX: 35.0
 };
 
 // ── PH AIR — PH-4502C ────────────────────────────────────────
 // Optimal ikan nila: 6.5–8.5
 // Sinkron: config.h PH_MIN / PH_MAX
 export const PH = {
+    KRITIS_MAX: 9.0,
+    TOLERANSI_MAX: 8.5,
+    MAX: 7.5,
     MIN: 6.5,
-    MAX: 8.5,
+    TOLERANSI_MIN: 6.0,
+    KRITIS_MIN: 5.0
 };
 
 // ── Turbidity — TSW-20M (RAW ADC 0–4095) ─────────────────────
@@ -56,9 +62,11 @@ export const STIR = {
 // ─────────────────────────────────────────────────────────────
 export function evaluateTemp(celsius) {
     if (celsius === null || celsius === undefined || celsius === -999) return 'error';
-    if (celsius < TEMP.MIN) return 'too_cold';
-    if (celsius > TEMP.MAX) return 'too_hot';
-    return 'normal';
+    if (celsius < TEMP.MIN) return 'WARNING';
+    if (celsius > TEMP.MAX) return 'WARNING';
+    if (celsius <= TEMP.KRITIS_MIN) return 'DANGER';
+    if (celsius >= TEMP.KRITIS_MAX) return 'DANGER';
+    return 'OPTIMAL';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -66,10 +74,12 @@ export function evaluateTemp(celsius) {
 // Return: 'normal' | 'too_low' | 'too_high' | 'error'
 // ─────────────────────────────────────────────────────────────
 export function evaluatePh(ph) {
-    if (ph === null || ph === undefined || ph === -999) return 'error';
-    if (ph < PH.MIN) return 'too_low';
-    if (ph > PH.MAX) return 'too_high';
-    return 'normal';
+    if (ph === null || ph === undefined || ph === -999 || ph < 0 || ph > 10) return 'error';
+    if (ph < PH.MIN) return 'WARNING';
+    if (ph > PH.MAX) return 'WARNING';
+    if (ph <= PH.KRITIS_MIN) return 'DANGER';
+    if (ph >= PH.KRITIS_MAX) return 'DANGER';
+    return 'OPTIMAL';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -78,10 +88,10 @@ export function evaluatePh(ph) {
 // ─────────────────────────────────────────────────────────────
 export function evaluateTurbidity(raw) {
     if (raw === null || raw === undefined) return 'unknown';
-    if (raw >= TURBIDITY.RAW_CLEAR_MIN)                                                          return 'too_clear';
-    if (raw >= TURBIDITY.RAW_OPTIMAL_MIN && raw <= TURBIDITY.RAW_OPTIMAL_MAX)                    return 'optimal';
-    if (raw >  TURBIDITY.RAW_WARNING_MAX && raw <  TURBIDITY.RAW_OPTIMAL_MIN)                    return 'warning';
-    return 'danger'; // raw <= RAW_WARNING_MAX
+    if (raw >= TURBIDITY.RAW_CLEAR_MIN)                                                          return 'WARNING';
+    if (raw >= TURBIDITY.RAW_OPTIMAL_MIN && raw <= TURBIDITY.RAW_OPTIMAL_MAX)                    return 'OPTIMAL';
+    if (raw >  TURBIDITY.RAW_WARNING_MAX && raw <  TURBIDITY.RAW_OPTIMAL_MIN)                    return 'WARNING';
+    return 'DANGER';
 }
 
 // ─────────────────────────────────────────────────────────────

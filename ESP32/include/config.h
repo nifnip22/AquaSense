@@ -18,14 +18,16 @@
 #define PIN_TEMP_SENSOR         4      // DS18B20 DATA pin
 
 #define TEMP_READ_INTERVAL      500     // ms — interval baca suhu
-#define TEMP_SAMPLE_COUNT       5       // jumlah sampel untuk smoothing
 #define TEMP_FILTER_ALPHA       0.25f   // EMA filter (lebih kecil = lebih halus)
 #define TEMP_CALIBRATION_OFFSET 0.0f   // offset kalibrasi (°C)
+#define TEMP_MAX_SPIKE          3.0f    // °C — toleransi lonjakan maks antar pembacaan (Edge Anomaly Detection)
+#define DS18B20_RESOLUTION      10      // bit — 10-bit konversi cepat (~187.5ms), akurasi 0.25°C (cukup untuk ikan)
 
 // Threshold optimal ikan nila
-#define TEMP_MIN                25.0f   // °C — batas bawah
-#define TEMP_MAX                30.0f   // °C — batas atas
-
+#define TEMP_MIN                26.0f   // °C — batas optimal bawah
+#define TEMP_MAX                32.0f   // °C — batas optimal atas
+#define TEMP_KRITIS_MIN         14.0f   // °C — batas kritis bawah
+#define TEMP_KRITIS_MAX         35.0f   // °C — batas kritis atas
 
 // ═════════════════════════════════════════════════════════════
 // 2. TURBIDITY SENSOR — TSW-20M
@@ -55,7 +57,7 @@
 // RAW ADC thresholds — sinkron dengan Backend/src/services/thresholds.js
 // Semakin TINGGI raw ADC → air semakin JERNIH
 // Semakin RENDAH raw ADC → air semakin KERUH
-#define TURBIDITY_RAW_CLEAR_MIN    2100  // ADC >= ini → terlalu jernih
+#define TURBIDITY_RAW_CLEAR_MIN    2001  // ADC >= ini → terlalu jernih
 #define TURBIDITY_RAW_OPTIMAL_MAX  2000  // batas atas optimal
 #define TURBIDITY_RAW_OPTIMAL_MIN   900  // batas bawah optimal
 #define TURBIDITY_RAW_WARNING_MAX   800  // ADC <= ini → danger
@@ -152,8 +154,12 @@
 #define PH_FILTER_ALPHA         0.15f   // EMA filter (lebih halus)
 
 // Threshold optimal ikan nila
+#define PH_KRITIS_MAX           9.0f
+#define PH_TOLERANSI_MAX        8.5f
+#define PH_MAX                  7.5f
 #define PH_MIN                  6.5f
-#define PH_MAX                  8.5f
+#define PH_TOLERANSI_MIN        6.0f
+#define PH_KRITIS_MIN           5.0f
 
 // Default kalibrasi (dipakai sebelum kalibrasi manual)
 // Nilai ini AKAN ditimpa setelah kalibrasi disimpan ke NVS
@@ -162,40 +168,7 @@
 
 
 // ═════════════════════════════════════════════════════════════
-// 6. FEED GATE — Servo MG996R (Buka/Tutup Lubang Pakan)
-// ═════════════════════════════════════════════════════════════
-// Wiring:
-//   Sinyal (oranye) → GPIO 13 (PWM)
-//   VCC    (merah)  → 5–6V EKSTERNAL (JANGAN dari pin 5V ESP32!)
-//   GND    (coklat) → GND ESP32 (WAJIB common ground)
-//
-// ⚠ PENTING: MG996R bisa menarik arus 1–2A saat start/stall.
-// Jika disuplai langsung dari ESP32, board berisiko restart
-// atau brownout. Gunakan power supply eksternal 5–6V minimal 2A,
-// dan tetap sambungkan GND-nya ke GND ESP32 (common ground).
- 
-#define SERVO_FEEDER_PIN            13      // GPIO sinyal PWM servo
- 
-// Sudut servo (derajat) — WAJIB DIKALIBRASI ke mekanisme gerbang
-// fisik Anda. Gunakan sketch test_servo_calibration.txt di folder
-// /test untuk mencari sudut tertutup & terbuka yang pas sebelum
-// mengubah nilai default di bawah ini.
-#define SERVO_ANGLE_CLOSED          0       // derajat — posisi tertutup
-#define SERVO_ANGLE_OPEN            90      // derajat — posisi terbuka
- 
-// Pulse width (mikrosekon) — range umum yang aman untuk MG996R
-#define SERVO_PULSE_MIN_US          500
-#define SERVO_PULSE_MAX_US          2400
- 
-// Durasi buka (detik). SERVO_DEFAULT_OPEN_SEC dipakai hanya jika
-// perintah MQTT/app tidak menyertakan field "duration_sec".
-#define SERVO_DEFAULT_OPEN_SEC      3       // detik — default fallback
-#define SERVO_MIN_OPEN_SEC          1       // detik — batas bawah (safety)
-#define SERVO_MAX_OPEN_SEC          30      // detik — batas atas (safety)
-
-
-// ═════════════════════════════════════════════════════════════
-// 4. FEED STIRRER — Relay 2 Channel + Motor Power Window
+// 6. FEED STIRRER — Relay 2 Channel + Motor Power Window
 // ═════════════════════════════════════════════════════════════
 // Wiring (per channel, motor bisa 2 arah / reversing):
 //   ESP32 GPIO(CH1) → IN1 modul relay 5V

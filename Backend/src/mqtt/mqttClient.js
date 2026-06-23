@@ -2,7 +2,12 @@
 import mqtt from 'mqtt';
 import 'dotenv/config';
 import { supabase } from '../db/supabase.js';
-import { evaluateTemp, evaluatePh, evaluateTurbidity, evaluateFeedLevel } from '../services/thresholds.js';
+import {
+    evaluateTemp,
+    evaluatePh,
+    evaluateTurbidity,
+    evaluateFeedLevel
+} from '../services/thresholds.js';
 import { processAlerts } from '../services/alertService.js';
 
 const BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
@@ -34,6 +39,7 @@ export function startMqttClient() {
             if (err) console.error('[MQTT] Gagal subscribe:', err.message);
             else     console.log(`[MQTT] 📡 Subscribe: ${TOPIC_SENSORS}, ${TOPIC_FEEDING}`);
         });
+        startPollingMixerStatus();
     });
 
     client.on('message', async (topic, payload) => {
@@ -48,7 +54,7 @@ export function startMqttClient() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Publish functions — dipakai dari routes
+// Publish functions
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -72,7 +78,7 @@ export function publishFeedCommand(device_id, duration_sec) {
  * Kirim perintah ON/OFF mixer ke ESP32
  * Topic  : aquasense/{device_id}/command/mixer
  * Payload: { "is_on": true, "duration_min": 15 }
- *          { "is_on": false }
+ *        | { "is_on": false }
  */
 export function publishMixerCommand(device_id, is_on, duration_min = 0) {
     if (!client?.connected) {
@@ -83,7 +89,7 @@ export function publishMixerCommand(device_id, is_on, duration_min = 0) {
     const payload = JSON.stringify(
         is_on ? { is_on: true, duration_min } : { is_on: false }
     );
-    client.publish(topic, payload, { qos: 1 });
+    client.publish(topic, payload, { qos: 1, retain: true });
     console.log(`[MQTT] 🔄 Mixer command → ${topic} | ${payload}`);
     return true;
 }
@@ -91,12 +97,7 @@ export function publishMixerCommand(device_id, is_on, duration_min = 0) {
 /**
  * Sync semua jadwal mixer aktif ke ESP32
  * Topic  : aquasense/{device_id}/command/mixer_schedules
- * Payload: {
- *   "schedules": [
- *     { "time": "08:00", "duration_min": 15 },
- *     { "time": "14:00", "duration_min": 10 }
- *   ]
- * }
+ * Payload: { "schedules": [{ "time": "08:00", "duration_min": 15 }, ...] }
  *
  * ESP32 akan replace seluruh jadwal internalnya dengan list ini.
  * Array kosong = hapus semua jadwal.
@@ -110,6 +111,23 @@ export function publishMixerSchedules(device_id, schedules) {
     const payload = JSON.stringify({ schedules });
     client.publish(topic, payload, { qos: 1 });
     console.log(`[MQTT] 📅 Mixer schedules → ${topic} | ${schedules.length} jadwal`);
+    return true;
+}
+
+/**
+ * Kirim perintah jadwal stirrer ke ESP32
+ * Topic  : aquasense/{device_id}/command/stir
+ * Payload: { "mode": "schedule"|"manual", "interval_min": N, "duration_sec": N }
+ */
+export function publishStirCommand(device_id, payload_obj) {
+    if (!client?.connected) {
+        console.warn('[MQTT] Tidak terhubung, gagal kirim command stir.');
+        return false;
+    }
+    const topic   = `aquasense/${device_id}/command/stir`;
+    const payload = JSON.stringify(payload_obj);
+    client.publish(topic, payload, { qos: 1 });
+    console.log(`[MQTT] 🌀 Stir command → ${topic} | ${payload}`);
     return true;
 }
 
@@ -134,24 +152,16 @@ async function handleMessage(topic, payload) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// handleSensorData()
-//
-// Payload dari ESP32 (mqtt_manager.cpp):
-// {
-//   "temperature":      27.50,
-//   "ph":               7.20,
-//   "turbidity_raw":    1200,
-//   "feed_sensor_ok":   true,
-//   "feed_level_pct":   65.3,
-//   "feed_distance_mm": 450,
-//   "rssi":             -65,
-//   "uptime_ms":        123456
-// }
+// PENTING:
+// ESP32 mengirim "turbidity_filtered" (moving average dari edge computing),
+// BUKAN "turbidity_raw". Field ini yang disimpan ke DB dan dievaluasi.
 // ─────────────────────────────────────────────────────────────
 async function handleSensorData(device_id, raw) {
+    // Evaluasi status setiap sensor berdasarkan threshold
     const temp_status      = evaluateTemp(raw.temperature);
     const ph_status        = evaluatePh(raw.ph);
-    const turbidity_status = evaluateTurbidity(raw.turbidity_raw);
+    // ✅ Gunakan turbidity_filtered sesuai payload ESP32
+    const turbidity_status = evaluateTurbidity(raw.turbidity_filtered);
     const feed_status      = raw.feed_sensor_ok
         ? evaluateFeedLevel(raw.feed_level_pct)
         : 'unknown';
@@ -160,20 +170,32 @@ async function handleSensorData(device_id, raw) {
         device_id,
         recorded_at: new Date().toISOString(),
 
-        temperature:  raw.temperature  ?? null,
+        // ── Temperature ─────────────────────────────────────────
+        temperature: raw.temperature ?? null,
         temp_status,
 
-        ph:        raw.ph        ?? null,
+        // ── pH ──────────────────────────────────────────────────
+        ph:        raw.ph ?? null,
         ph_status,
 
-        turbidity_raw:    raw.turbidity_raw    ?? null,
+        // ── Turbidity (filtered moving average dari ESP32) ──────
+        // ✅ Field di DB sekarang turbidity_filtered, bukan turbidity_raw
+        turbidity_filtered: raw.turbidity_filtered ?? null,
         turbidity_status,
 
+        // ── Feed Level ──────────────────────────────────────────
         feed_level_pct:   raw.feed_sensor_ok ? (raw.feed_level_pct   ?? null) : null,
         feed_distance_mm: raw.feed_sensor_ok ? (raw.feed_distance_mm ?? null) : null,
         feed_sensor_ok:   raw.feed_sensor_ok  ?? false,
         feed_status,
 
+        // ── Mixer Snapshot ─────────────────────────────────────
+        // ✅ Field baru: status mixer saat data dikirim dari ESP32
+        mixer_on:             raw.mixer_on             ?? false,
+        mixer_remaining_sec:  raw.mixer_remaining_sec  ?? 0,
+        mixer_schedule_count: raw.mixer_schedule_count ?? 0,
+
+        // ── Metadata ────────────────────────────────────────────
         rssi:      raw.rssi      ?? null,
         uptime_ms: raw.uptime_ms ?? null,
     };
@@ -191,11 +213,39 @@ async function handleSensorData(device_id, raw) {
         `[Supabase] ✅ Tersimpan | ` +
         `Temp: ${raw.temperature}°C (${temp_status}) | ` +
         `PH: ${raw.ph} (${ph_status}) | ` +
-        `TurbRAW: ${raw.turbidity_raw} (${turbidity_status}) | ` +
-        `Feed: ${raw.feed_level_pct}% (${feed_status})`
+        `Turbidity: ${raw.turbidity_filtered} ADC (${turbidity_status}) | ` +
+        `Feed: ${raw.feed_level_pct}% (${feed_status}) | ` +
+        `Mixer: ${raw.mixer_on ? 'ON' : 'OFF'} (sisa ${raw.mixer_remaining_sec}s)`
     );
 
+    // Update mixer_status table agar dashboard realtime sinkron
+    await syncMixerStatus(device_id, raw);
+
+    // Proses alert otomatis
     await processAlerts(device_id, row);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sinkronisasi mixer_status dari data sensor yang masuk
+// Lebih efisien dari polling karena dipicu oleh data aktual ESP32
+// ─────────────────────────────────────────────────────────────
+async function syncMixerStatus(device_id, raw) {
+    if (raw.mixer_on === undefined) return; // ESP32 tidak kirim data mixer
+
+    const { error } = await supabase
+        .from('mixer_status')
+        .upsert({
+            id:            1,
+            device_id,
+            is_on:         raw.mixer_on             ?? false,
+            remaining_sec: raw.mixer_remaining_sec  ?? 0,
+            schedule_count: raw.mixer_schedule_count ?? 0,
+            updated_at:    new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+    if (error) {
+        console.error('[Supabase] ❌ Gagal update mixer_status:', error.message);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -218,4 +268,39 @@ async function handleFeedingLog(device_id, raw) {
     }
 
     console.log(`[Supabase] 🐟 Feeding log | trigger: ${row.trigger_type} | durasi: ${row.duration_sec}s`);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Polling fallback: DB → MQTT (backup jika FE update langsung ke DB)
+// Idealnya FE selalu lewat POST /api/mixer/control, bukan edit DB langsung.
+// ─────────────────────────────────────────────────────────────
+let lastMixerState = null;
+
+export function startPollingMixerStatus() {
+    console.log('⏳ Memulai polling mixer_status setiap 3 detik...');
+
+    setInterval(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('mixer_status')
+                .select('is_on')
+                .eq('id', 1)
+                .single();
+
+            if (error) {
+                console.error('❌ Gagal polling DB:', error.message);
+                return;
+            }
+
+            // Hanya publish MQTT jika status berubah (mencegah spam)
+            if (lastMixerState !== null && lastMixerState !== data.is_on) {
+                console.log(`🔔 Perubahan mixer dari FE terdeteksi: ${data.is_on ? 'ON' : 'OFF'}`);
+                publishMixerCommand('ESP32-DEVKIT-01', data.is_on, data.is_on ? 15 : 0);
+            }
+
+            lastMixerState = data.is_on;
+        } catch (err) {
+            console.error('⚠️ Error polling mixer_status:', err);
+        }
+    }, 3000);
 }
