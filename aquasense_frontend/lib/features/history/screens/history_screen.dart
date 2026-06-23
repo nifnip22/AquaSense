@@ -22,6 +22,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   int _currentPage = 0;
   final int _itemsPerPage = 5;
 
+  String _selectedFilter = 'All';
+
   @override
   void initState() {
     super.initState();
@@ -34,7 +36,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
         .from('alerts')
         .select()
         .order('created_at', ascending: false)
-        .limit(20);
+        .limit(
+          50,
+        );
 
     return response.map((json) => AlertModel.fromJson(json)).toList();
   }
@@ -60,10 +64,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Filter Categories
               HistoryFilterChips(
                 onFilterSelected: (filter) {
-                  // For now, just let it blank
+                  setState(() {
+                    _selectedFilter = filter;
+                    _currentPage =
+                        0;
+                  });
                 },
               ),
               const SizedBox(height: 24),
@@ -100,23 +107,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   final allAlerts = snapshot.data ?? [];
 
-                  if (allAlerts.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
+                  List<AlertModel> filteredAlerts = allAlerts;
+                  if (_selectedFilter.toUpperCase() != 'ALL') {
+                    filteredAlerts = allAlerts.where((alert) {
+                      final type = alert.type.toUpperCase();
+                      if (_selectedFilter.toUpperCase() == 'ALERTS' &&
+                          type == 'ALERT') {
+                        return true;
+                      }
+                      if (_selectedFilter.toUpperCase() == 'FEEDING' &&
+                          type == 'FEEDING') {
+                        return true;
+                      }
+                      if (_selectedFilter.toUpperCase() == 'SYSTEM' &&
+                          type == 'SYSTEM') {
+                        return true;
+                      }
+
+                      return type == _selectedFilter.toUpperCase();
+                    }).toList();
+                  }
+
+                  if (filteredAlerts.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
                       child: Center(
-                        child: Text('Sistem normal. Belum ada log history.'),
+                        child: Text(
+                          'Sistem normal. Belum ada log history untuk $_selectedFilter.',
+                        ),
                       ),
                     );
                   }
 
-                  final int totalPages = (allAlerts.length / _itemsPerPage)
+                  final int totalPages = (filteredAlerts.length / _itemsPerPage)
                       .ceil();
 
                   if (_currentPage >= totalPages) {
                     _currentPage = totalPages - 1 > 0 ? totalPages - 1 : 0;
                   }
 
-                  final currentAlerts = allAlerts
+                  final currentAlerts = filteredAlerts
                       .skip(_currentPage * _itemsPerPage)
                       .take(_itemsPerPage)
                       .toList();
@@ -125,31 +155,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       GestureDetector(
                         onHorizontalDragEnd: (details) {
-                          if (details.primaryVelocity! < -300) { 
+                          if (details.primaryVelocity! < -300) {
                             if (_currentPage < totalPages - 1) {
                               setState(() => _currentPage++);
                             }
-                          } 
-                          else if (details.primaryVelocity! > 300) { 
+                          } else if (details.primaryVelocity! > 300) {
                             if (_currentPage > 0) {
                               setState(() => _currentPage--);
                             }
                           }
                         },
                         child: Container(
-                          color: Colors.transparent, 
+                          color: Colors.transparent,
                           child: Column(
-                            children: currentAlerts.map((alert) => _buildDynamicLogCard(alert)).toList(),
+                            children: currentAlerts
+                                .map((alert) => _buildDynamicLogCard(alert))
+                                .toList(),
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       Center(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(totalPages, (index) => _buildDot(isActive: index == _currentPage)),
+                          children: List.generate(
+                            totalPages,
+                            (index) =>
+                                _buildDot(isActive: index == _currentPage),
+                          ),
                         ),
                       ),
                     ],
@@ -165,7 +200,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  // Function for building log cards dynamically based on the alert type
   Widget _buildDynamicLogCard(AlertModel alert) {
     final timeString = DateFormat('hh:mm a').format(alert.createdAt);
 

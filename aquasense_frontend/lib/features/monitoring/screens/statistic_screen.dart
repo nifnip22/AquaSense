@@ -38,7 +38,7 @@ class _StatisticScreenState extends State<StatisticScreen> {
     final sensorState = context.watch<SensorProvider>();
     final data = sensorState.currentData;
 
-    final isDataLoading = sensorState.tempHistory.isEmpty;
+    final isDataLoading = sensorState.isChartLoading;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -74,9 +74,10 @@ class _StatisticScreenState extends State<StatisticScreen> {
               child: Column(
                 children: [
                   TimeFilter(
+                    selectedIndex: sensorState.timeFilterIndex,
+
                     onFilterChanged: (index) {
-                      setState(() {
-                      });
+                      sensorState.updateTimeFilter(index);
                     },
                   ),
                   const SizedBox(height: 24),

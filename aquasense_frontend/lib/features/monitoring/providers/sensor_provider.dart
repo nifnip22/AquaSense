@@ -103,6 +103,66 @@ class SensorProvider extends ChangeNotifier {
     }
   }
 
+  // === TIME FILTER VARIABLES ===
+  int _timeFilterIndex = 0;
+  int get timeFilterIndex => _timeFilterIndex;
+
+  bool _isChartLoading = false;
+  bool get isChartLoading => _isChartLoading;
+
+  Future<void> updateTimeFilter(int index) async {
+    if (_timeFilterIndex == index) return;
+    _timeFilterIndex = index;
+    await fetchHistoricalData();
+  }
+
+  Future<void> fetchHistoricalData() async {
+    _isChartLoading = true;
+    notifyListeners();
+
+    DateTime cutoff;
+    if (_timeFilterIndex == 0) {
+      cutoff = DateTime.now().subtract(const Duration(hours: 24));
+    } else if (_timeFilterIndex == 1) {
+      cutoff = DateTime.now().subtract(const Duration(days: 7));
+    } else {
+      cutoff = DateTime.now().subtract(const Duration(days: 30));
+    }
+
+    try {
+      final response = await _supabase
+          .from('sensor_readings')
+          .select()
+          .gte('recorded_at', cutoff.toIso8601String())
+          .order('recorded_at', ascending: true);
+
+      _tempHistory.clear();
+      _phHistory.clear();
+      _feedLevelHistory.clear();
+
+      if (response.isNotEmpty) {
+        int step = (response.length / 100).ceil();
+        if (step < 1) step = 1;
+
+        double x = 0;
+        for (int i = 0; i < response.length; i += step) {
+          final data = SensorModel.fromJson(response[i]);
+          _tempHistory.add(FlSpot(x, data.temperature));
+          _phHistory.add(FlSpot(x, data.phLevel));
+          _feedLevelHistory.add(FlSpot(x, data.feedLevelPct));
+          x++;
+        }
+        
+        _timeIndex = x; 
+      }
+    } catch (e) {
+      debugPrint('Gagal menarik riwayat grafik: $e');
+    } finally {
+      _isChartLoading = false;
+      notifyListeners();
+    }
+  }
+
   String get turbidityStatusText {
     return _currentData.turbidityStatus ?? 'Unknown';
   }

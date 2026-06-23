@@ -5,6 +5,7 @@ import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/mixer_provider.dart';
 import '../widgets/feed_quantity_card.dart';
+import '../widgets/mixer_duration_card.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -209,6 +210,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       );
                     },
                   ),
+                const SizedBox(height: 24),
+                MixerDurationCard(
+                  currentDuration: _defaultMixerDuration,
+                  onChanged: (val) {
+                    setState(() {
+                      _defaultMixerDuration = val.toInt();
+                    });
+                  },
+                ),
               ],
             ),
           );
