@@ -215,23 +215,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
       );
     }
 
-    final card = HistoryLogCard(
+    Widget card = HistoryLogCard(
       title: alert.title,
-      iconData: iconData,
-      iconColor: iconColor,
-      iconBgColor: iconBgColor,
-      borderColor: borderColor,
+      iconData: alert.isResolved ? Icons.check_circle : iconData,
+      iconColor: alert.isResolved ? Colors.green : iconColor,
+      iconBgColor: alert.isResolved ? Colors.green.shade50 : iconBgColor,
+      borderColor: alert.isResolved ? Colors.green.shade200 : borderColor,
       subtitleText: customSubtitle == null ? subtitleText : null,
-      customSubtitle: customSubtitle,
-      showArrow: showArrow,
+      customSubtitle: alert.isResolved 
+          ? Text('${DateFormat('hh:mm a').format(alert.createdAt)} • Resolved', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11))
+          : customSubtitle,
+      showArrow: alert.isResolved ? false : showArrow,
     );
 
-    if (alert.type == 'ALERT') {
+    if (alert.isResolved) {
+      card = Opacity(
+        opacity: 0.55,
+        child: card,
+      );
+    }
+
+    if (alert.type == 'ALERT' && !alert.isResolved) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
         child: GestureDetector(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => AlertDetailScreen(alert: alert)));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AlertDetailScreen(alert: alert)),
+            );
           },
           child: card,
         ),

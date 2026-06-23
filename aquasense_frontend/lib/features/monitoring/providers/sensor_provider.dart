@@ -168,26 +168,32 @@ class SensorProvider extends ChangeNotifier {
   }
 
   Future<bool> dispenseFeedManual(int durationSec) async {
-    if (_isDispensing) return false;
-
     _isDispensing = true;
     notifyListeners();
 
+    final String deviceId = 'AS-BPN-001';
+    
     try {
-      await _supabase.from('feeding_logs').insert({
-        'trigger_type': 'manual',
+      await _supabase.from('feeder_status').upsert({
+        'id': 1, 
+        'device_id': deviceId,
+        'is_on': true,
         'duration_sec': durationSec,
-        'notes': 'Triggered instantly from mobile app',
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      
+      Future.delayed(const Duration(seconds: 10), () {
+        _isDispensing = false;
+        notifyListeners();
       });
 
-      await Future.delayed(const Duration(seconds: 10));
       return true;
     } catch (e) {
-      debugPrint('Gagal memicu pemberian pakan manual: $e');
-      return false;
-    } finally {
+      debugPrint('Gagal memicu pemberian pakan: $e');
+      
       _isDispensing = false;
       notifyListeners();
+      return false;
     }
   }
 

@@ -58,4 +58,38 @@ class HistoryProvider extends ChangeNotifier {
       },
     ).subscribe();
   }
+
+  Future<bool> markAlertAsResolved(int alertId) async {
+    try {
+      await _supabase
+          .from('alerts')
+          .update({
+            'resolved': true,
+            'resolved_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', alertId);
+
+      await fetchLogs(); 
+      return true;
+    } catch (e) {
+      debugPrint('Gagal meresolve alert: $e');
+      return false;
+    }
+  }
+
+  Future<bool> activateHardwareAction(String sensorType) async {
+    final String deviceId = 'AS-BPN-001'; 
+    try {
+      await _supabase.from('mixer_status').upsert({
+        'id': 1, 
+        'device_id': deviceId,
+        'is_on': true,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Gagal mengirim perintah ke Mixer: $e');
+      return false;
+    }
+  }
 }
