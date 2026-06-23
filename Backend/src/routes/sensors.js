@@ -19,7 +19,7 @@ app.get('/latest', async (c) => {
 
 // ─────────────────────────────────────────────────────────────
 // GET /api/sensors/history?device_id=&limit=50&from=&to=
-// Riwayat pembacaan sensor
+// Riwayat pembacaan sensor dengan filter opsional
 // ─────────────────────────────────────────────────────────────
 app.get('/history', async (c) => {
     const device_id = c.req.query('device_id');
@@ -44,7 +44,7 @@ app.get('/history', async (c) => {
 
 // ─────────────────────────────────────────────────────────────
 // GET /api/sensors/stats?device_id=&period=1h|6h|24h|7d
-// Statistik min/max/avg per periode
+// Statistik min/max/avg per periode untuk semua sensor
 // ─────────────────────────────────────────────────────────────
 app.get('/stats', async (c) => {
     const device_id = c.req.query('device_id') ?? 'ESP32-DEVKIT-01';
@@ -54,15 +54,18 @@ app.get('/stats', async (c) => {
     const hours     = periodMap[period] ?? 24;
     const from      = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
+    // ✅ Gunakan turbidity_filtered, hapus stir_interval_min & stir_duration_sec
+    // (kolom stirrer sudah tidak ada di sensor_readings)
     const { data, error } = await supabase
         .from('sensor_readings')
-        .select('temperature, ph, turbidity_raw, feed_level_pct, stir_interval_min, stir_duration_sec')
+        .select('temperature, ph, turbidity_filtered, feed_level_pct, mixer_on, mixer_remaining_sec')
         .eq('device_id', device_id)
         .gte('recorded_at', from);
 
     if (error) return c.json({ error: error.message }, 500);
     if (!data.length) return c.json({ period, device_id, count: 0, stats: null });
 
+    // Helper: hitung min/max/avg dari array objek per key
     const calc = (arr, key) => {
         const vals = arr.map(r => r[key]).filter(v => v !== null && v !== undefined);
         if (!vals.length) return null;
@@ -74,22 +77,24 @@ app.get('/stats', async (c) => {
         };
     };
 
-    // Ambil nilai stirrer terbaru (bukan avg — ini config, bukan sensor)
-    const latestStir = [...data].reverse().find(r => r.stir_interval_min !== null);
+    // Status mixer terkini (ambil record terbaru, bukan avg)
+    const latestMixer = [...data].find(r => r.mixer_on !== null);
 
     return c.json({
         period,
         device_id,
         count: data.length,
         stats: {
-            temperature:    calc(data, 'temperature'),
-            ph:             calc(data, 'ph'),
-            turbidity_raw:  calc(data, 'turbidity_raw'),
-            feed_level_pct: calc(data, 'feed_level_pct'),
+            temperature:        calc(data, 'temperature'),
+            ph:                 calc(data, 'ph'),
+            // ✅ turbidity_filtered menggantikan turbidity_raw
+            turbidity_filtered: calc(data, 'turbidity_filtered'),
+            feed_level_pct:     calc(data, 'feed_level_pct'),
         },
-        stirrer_config: latestStir ? {
-            interval_min: latestStir.stir_interval_min,
-            duration_sec: latestStir.stir_duration_sec,
+        // ✅ Snapshot status mixer terkini dalam periode yang dipilih
+        mixer_latest: latestMixer ? {
+            is_on:         latestMixer.mixer_on,
+            remaining_sec: latestMixer.mixer_remaining_sec,
         } : null,
     });
 });
