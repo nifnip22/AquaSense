@@ -7,6 +7,7 @@
 #include "ph_sensor.h"
 #include "secrets.h"
 #include "mqtt_manager.h"
+#include "mixer.h"
 
 // ── Timing ────────────────────────────────────────────────────
 static unsigned long lastFeedRead = 0;
@@ -41,6 +42,9 @@ void setup() {
  
     // Init koneksi WiFi + MQTT
     mqtt_manager_setup();
+
+    // Init mixer relay + NTP + jadwal dari NVS
+    mixer_init();
  
     Serial.println("[Main] Setup selesai. Mulai loop...\n");
 }
@@ -52,6 +56,9 @@ void loop() {
     // Jaga koneksi MQTT tetap hidup
     mqtt_manager_loop();
 
+    // Cek timer OFF mixer + jadwal otomatis
+    mixer_loop();
+
     // ── Cek timer gerbang pakan (auto-close setelah durasi habis)
     feedGate_loop();
 
@@ -60,9 +67,18 @@ void loop() {
     temperature_print(suhu);
 
     // ── Baca Turbiditas ───────────────────────────────────────
-    // turbidityLoop() baca + simpan ke state internal
-    // Getter dipakai untuk ambil nilai ke MQTT
     turbidityLoop();
+    
+    if (!turbidity_is_healthy()) {
+        Serial.println("[Main] ⚠️ Turbidity sensor: unhealthy state detected!");
+    }
+    
+    // Cek anomali (optional: bisa trigger alert ke backend)
+    if (turbidity_is_anomaly()) {
+        Serial.printf("[Main] ⚠️ Turbidity anomaly: trend=%d, value=%d\n", 
+                      turbidity_get_trend(), turbidity_get_filtered());
+        turbidity_reset_anomaly();  // Reset flag setelah handle
+    }
 
     // ── Baca Level Pakan ──────────────────────────────────────
     if (feedSensorReady && (now - lastFeedRead >= FEED_READ_INTERVAL)) {
@@ -81,12 +97,16 @@ void loop() {
     }
 
     // ── Publish ke MQTT ───────────────────────────────────────
+    // Gunakan filtered value (moving average) daripada raw untuk:
+    // - Stabilitas data di backend
+    // - Mengurangi noise dari sensor
+    // - Lebih akurat untuk decision making
     if (now - lastPublish >= MQTT_PUBLISH_INTERVAL) {
         lastPublish = now;
         mqtt_publish_sensors(
             suhu,
             g_ph,
-            turbidity_get_raw(),
+            turbidity_get_filtered(),
             feedSensorReady ? g_feed.levelPercent : -1.0f,
             feedSensorReady ? (int)g_feed.distanceMM : -1,
             feedSensorReady ? g_feed.sensorOK : false

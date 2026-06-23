@@ -20,6 +20,11 @@ static uint8_t        _scheduleCount  = 0;
 static bool           _isOn           = false;
 static unsigned long  _turnOffAtMs    = 0;    // 0 = tidak ada timer
 
+// ── Tambahan untuk logika bolak-balik motor ──────────────
+static unsigned long _lastToggleMs = 0;
+static bool          _toggleState  = false; // false = IN1 nyala, true = IN2 nyala
+const unsigned long  TOGGLE_INTERVAL_MS = 5000; // Ganti arah setiap 5 detik (5000 ms)
+
 static Preferences    _prefs;
 #define NVS_NAMESPACE   "mixer"
 #define NVS_KEY_COUNT   "sched_count"
@@ -105,6 +110,7 @@ void mixer_init() {
     pinMode(STIR_RELAY_CH1_PIN, OUTPUT);
     pinMode(STIR_RELAY_CH2_PIN, OUTPUT);
     _relayWrite(false);  // pastikan mati saat boot
+    mixer_turn_off();
 
     // Inisialisasi NTP
     configTime(NTP_GMT_OFFSET, NTP_DST_OFFSET, NTP_SERVER);
@@ -137,39 +143,35 @@ void mixer_init() {
 // Non-blocking — dipanggil setiap iterasi loop() utama
 // ─────────────────────────────────────────────────────────────
 void mixer_loop() {
-    unsigned long now = millis();
+    // ... (kode yang mengecek jam NTP biarkan saja) ...
 
-    // 1. Cek timer OFF (manual atau dari jadwal)
-    if (_isOn && _turnOffAtMs != 0 && now >= _turnOffAtMs) {
-        mixer_turn_off();
-        return;
-    }
+    if (_isOn) {
+        // 1. Cek apakah timer durasi (duration_min) sudah habis
+        if (_turnOffAtMs > 0 && millis() >= _turnOffAtMs) {
+            mixer_turn_off();
+            return;
+        }
 
-    // 2. Cek jadwal clock-based (hanya jika mixer tidak sedang ON)
-    if (!_isOn && _scheduleCount > 0) {
-        struct tm timeinfo;
-        if (!getLocalTime(&timeinfo)) return;  // NTP belum sync
+        // 2. Logika memutar bergantian (Toggle)
+        if (millis() - _lastToggleMs >= TOGGLE_INTERVAL_MS) {
+            _lastToggleMs = millis();
+            _toggleState = !_toggleState; // Balikkan status
 
-        int currentHour   = timeinfo.tm_hour;
-        int currentMinute = timeinfo.tm_min;
+            uint8_t onState  = STIR_RELAY_ACTIVE_LOW ? LOW : HIGH;
+            uint8_t offState = STIR_RELAY_ACTIVE_LOW ? HIGH : LOW;
 
-        // Cegah trigger ganda di menit yang sama
-        bool alreadyTriggered = (_lastTriggeredHour   == currentHour &&
-                                 _lastTriggeredMinute == currentMinute);
-
-        if (!alreadyTriggered) {
-            for (uint8_t i = 0; i < _scheduleCount; i++) {
-                if (_schedules[i].hour   == currentHour &&
-                    _schedules[i].minute == currentMinute) {
-
-                    Serial.printf("[Mixer] ⏰ Jadwal %02d:%02d cocok — ON selama %d menit\n",
-                                  currentHour, currentMinute, _schedules[i].duration_min);
-
-                    mixer_turn_on(_schedules[i].duration_min);
-                    _lastTriggeredHour   = currentHour;
-                    _lastTriggeredMinute = currentMinute;
-                    break;
-                }
+            if (_toggleState == false) {
+                // Saatnya IN1 ON, IN2 OFF
+                digitalWrite(STIR_RELAY_CH2_PIN, offState); 
+                delay(100); // Jeda kecil (dead-time) agar tidak korsleting
+                digitalWrite(STIR_RELAY_CH1_PIN, onState);
+                Serial.println("[Mixer] 🔄 Arah 1 (IN1 ON)");
+            } else {
+                // Saatnya IN2 ON, IN1 OFF
+                digitalWrite(STIR_RELAY_CH1_PIN, offState);
+                delay(100); // Jeda kecil (dead-time) agar tidak korsleting
+                digitalWrite(STIR_RELAY_CH2_PIN, onState);
+                Serial.println("[Mixer] 🔄 Arah 2 (IN2 ON)");
             }
         }
     }
@@ -179,25 +181,38 @@ void mixer_loop() {
 // mixer_turn_on()
 // ─────────────────────────────────────────────────────────────
 void mixer_turn_on(uint16_t duration_min) {
-    if (duration_min < 1)   duration_min = 1;
-    if (duration_min > 120) duration_min = 120;
+    if (_isOn) {
+        _turnOffAtMs = millis() + (duration_min * 60000UL);
+        Serial.println("[Mixer] ⚡ Perintah ON diterima lagi, memperbarui durasi saja.");
+        return; 
+    }
+    _isOn = true;
+    _turnOffAtMs = millis() + (duration_min * 60000UL);
+    
+    _lastToggleMs = millis();
+    _toggleState  = false; // Mulai dari IN1
 
-    _relayWrite(true);
-    _isOn        = true;
-    _turnOffAtMs = millis() + ((unsigned long)duration_min * 60000UL);
+    uint8_t onState  = STIR_RELAY_ACTIVE_LOW ? LOW : HIGH;
+    uint8_t offState = STIR_RELAY_ACTIVE_LOW ? HIGH : LOW;
 
-    Serial.printf("[Mixer] 🟢 ON — durasi %d menit, mati otomatis pukul +%dm\n",
-                  duration_min, duration_min);
+    // Awal menyala: IN1 ON, IN2 OFF
+    digitalWrite(STIR_RELAY_CH2_PIN, offState); // Matikan IN2 dulu supaya aman
+    digitalWrite(STIR_RELAY_CH1_PIN, onState);  // Baru nyalakan IN1
 }
 
 // ─────────────────────────────────────────────────────────────
 // mixer_turn_off()
 // ─────────────────────────────────────────────────────────────
 void mixer_turn_off() {
-    _relayWrite(false);
-    _isOn        = false;
+    _isOn = false;
     _turnOffAtMs = 0;
-    Serial.println("[Mixer] 🔴 OFF");
+    
+    // Karena Active LOW, maka OFF = HIGH
+    uint8_t offState = STIR_RELAY_ACTIVE_LOW ? HIGH : LOW;
+    digitalWrite(STIR_RELAY_CH1_PIN, offState);
+    digitalWrite(STIR_RELAY_CH2_PIN, offState);
+    
+    Serial.println("[Mixer] 🛑 Motor OFF (Kedua Relay Mati)");
 }
 
 // ─────────────────────────────────────────────────────────────
