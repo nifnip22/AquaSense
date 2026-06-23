@@ -89,7 +89,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (scheduleProvider.schedules.isEmpty)
-                  _buildEmptyState('Belum ada jadwal pakan.')
+                  _buildEmptyState('There is no feeding schedule yet.')
                 else
                   ListView.builder(
                     shrinkWrap: true,
@@ -154,7 +154,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           Text(
                             mixerProvider.isCooldownActive 
                                 ? 'Waiting 5s for hardware safety...' 
-                                : (mixerProvider.isMixerOn ? 'Motor sedang berputar' : 'Motor dalam posisi mati'),
+                                : (mixerProvider.isMixerOn ? 'The motor is running' : 'Motor in off position'),
                             style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.black45),
                           ),
                         ],
@@ -190,7 +190,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (mixerProvider.mixerSchedules.isEmpty)
-                  _buildEmptyState('Belum ada jadwal otomatis untuk mixer.')
+                  _buildEmptyState('There is no automatic schedule for the mixer yet.')
                 else
                   ListView.builder(
                     shrinkWrap: true,
