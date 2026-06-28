@@ -176,7 +176,7 @@ void ph_print(float ph) {
         Serial.println("  ⚠ PERINGATAN: Air mulai Asam. Pantau kualitas air.");
     } else if (ph >= PH_KRITIS_MAX) {
         Serial.println("  🚨 FATAL: Sangat BASA! Segera evakuasi/ganti air!");
-    } else if (ph > PH_MAX) { // Karena di config PH_MAX == PH_TOLERANSI_MAX (8.5), masuk ke sini jika > 8.5
+    } else if (ph > PH_MAX) {
         Serial.println("  ⚠ PERINGATAN/BAHAYA: Air menuju Basa. Pantau kualitas air.");
     } else {
         Serial.println("  ✓ Normal (Kualitas Optimal untuk Nila)");

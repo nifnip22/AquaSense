@@ -28,7 +28,7 @@ void mqtt_manager_setup() {
     mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     mqttClient.setCallback(_mqtt_callback);
     mqttClient.setKeepAlive(60);
-    mqttClient.setBufferSize(512);
+    mqttClient.setBufferSize(1024);
 
     _mqtt_connect();
 }
@@ -178,7 +178,6 @@ static void _mqtt_connect() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
 static void _mqtt_callback(char* topic, byte* payload, unsigned int length) {
     char msg[length + 1];
     memcpy(msg, payload, length);
@@ -187,32 +186,63 @@ static void _mqtt_callback(char* topic, byte* payload, unsigned int length) {
     Serial.printf("[MQTT] ← Pesan masuk | Topic: %s\n", topic);
     Serial.printf("[MQTT]   Payload: %s\n", msg);
 
+    // =========================================================
+    // 1. BLOK PENANGANAN PERINTAH PAKAN (FEEDGATE)
+    // =========================================================
     if (strcmp(topic, MQTT_TOPIC_CMD_FEED) == 0) {
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, msg);
 
         if (err) {
-            Serial.println("[MQTT] JSON tidak valid!");
+            Serial.println("[MQTT] ❌ JSON tidak valid untuk FEEDING!");
             return;
         }
 
+        // Ambil durasi, jika kosong default ke 3 detik
         int duration_sec = doc["duration_sec"] | 3;
-        Serial.printf("[MQTT] 🐟 Perintah FEEDING diterima! Durasi: %d detik\n", duration_sec);
+        
+        // Ambil tipe trigger dari backend, jika kosong default ke "remote"
+        const char* trigger_type = doc["trigger_type"] | "remote"; 
 
-        // TODO: aktifkan motor feeder
-        // digitalWrite(PIN_FEEDER_MOTOR, HIGH);
-        // delay(duration_sec * 1000);
-        // digitalWrite(PIN_FEEDER_MOTOR, LOW);
+        Serial.printf("[MQTT] 🐟 Perintah FEEDING diterima! Durasi: %d detik | Tipe: %s\n", duration_sec, trigger_type);
+
+        // EKSEKUSI BUKA GERBANG PAKAN
         feedGate_openFor((uint16_t)duration_sec);
 
-        mqtt_publish_feeding("remote", duration_sec);
+        // LAPOR BALIK KE BACKEND AGAR MASUK DATABASE
+        mqtt_publish_feeding(trigger_type, duration_sec);
     }
+    // =========================================================
+    // 1. BLOK PENANGANAN PERINTAH FEEDER ON/OFF
+    // =========================================================
+    else if (strcmp(topic, MQTT_TOPIC_CMD_FEED) == 0) {
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, msg);
+
+        if (err) {
+            Serial.println("[MQTT] ❌ JSON tidak valid (mixer)!");
+            return;
+        }
+        bool is_on = doc["is_on"] | false;
+        uint16_t duration_min = doc["duration_min"] | 5;
+
+        if (is_on) {
+            mixer_turn_on(duration_min);
+            Serial.printf("[MQTT] 🔀 Feeder ON selama %d menit (manual dari app).\n", duration_min);
+        } else {
+            mixer_turn_off();
+            Serial.println("[MQTT] 🔀 Feeder OFF (manual dari app).");
+        }
+    }
+    // =========================================================
+    // 2. BLOK PENANGANAN PERINTAH MIXER ON/OFF
+    // =========================================================
     else if (strcmp(topic, MQTT_TOPIC_CMD_MIXER) == 0) {
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, msg);
 
         if (err) {
-            Serial.println("[MQTT] JSON tidak valid (mixer)!");
+            Serial.println("[MQTT] ❌ JSON tidak valid (mixer)!");
             return;
         }
         bool is_on = doc["is_on"] | false;
@@ -226,17 +256,18 @@ static void _mqtt_callback(char* topic, byte* payload, unsigned int length) {
             Serial.println("[MQTT] 🔀 Mixer OFF (manual dari app).");
         }
     }
+    // =========================================================
+    // 3. BLOK PENANGANAN JADWAL MIXER
+    // =========================================================
     else if (strcmp(topic, MQTT_TOPIC_CMD_MIXER_SCHEDULES) == 0) {
-        // Backend mengirim { "schedules": [{"time":"08:00","duration_min":15},...] }
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, msg);
 
         if (err || !doc["schedules"].is<JsonArray>()) {
-            Serial.println("[MQTT] JSON tidak valid (mixer_schedules)!");
+            Serial.println("[MQTT] ❌ JSON tidak valid (mixer_schedules)!");
             return;
         }
 
-        // Ekstrak array schedules lalu kirim ke mixer sebagai string JSON array
         String schedulesJson;
         serializeJson(doc["schedules"], schedulesJson);
         mixer_set_schedules(schedulesJson);

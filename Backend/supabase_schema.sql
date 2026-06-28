@@ -324,6 +324,16 @@ CREATE POLICY "service_role_all" ON mixer_schedules
 CREATE POLICY "service_role_all" ON mixer_status
     FOR ALL USING (auth.role() = 'service_role');
 
+
+create table public.feeder_status (
+  id integer not null,
+  device_id text not null,
+  is_on boolean null default false,
+  duration_sec integer null default 0,
+  updated_at timestamp with time zone null,
+  constraint feeder_status_pkey primary key (id)
+) TABLESPACE pg_default;
+
 -- Opsional: izinkan anon read untuk dashboard publik
 -- CREATE POLICY "anon_read_sensors"  ON sensor_readings  FOR SELECT USING (auth.role() = 'anon');
 -- CREATE POLICY "anon_read_alerts"   ON alerts           FOR SELECT USING (auth.role() = 'anon');

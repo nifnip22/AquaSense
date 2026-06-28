@@ -33,39 +33,33 @@ app.get('/', async (c) => {
 //
 // Catatan: insert manual ke feeding_logs juga dilakukan di sini sebagai
 // fallback jika ESP32 tidak publish balik (misal offline / no feeding event).
+// src/routes/feeding.js (Revisi POST)
 app.post('/', async (c) => {
-    const body        = await c.req.json();
-    const device_id   = body.device_id   ?? 'ESP32-DEVKIT-01';
+    const body         = await c.req.json();
+    const device_id    = body.device_id    ?? 'ESP32-DEVKIT-01';
     const duration_sec = body.duration_sec ?? 3;
-    const notes       = body.notes        ?? 'Triggered via API';
+    // notes dihapus karena nanti dicatat oleh mqttClient dari balikan ESP32
 
-    // Validasi
+    // Validasi safety (sesuai SERVO_MIN_OPEN_SEC dan MAX di ESP32)
     if (duration_sec < 1 || duration_sec > 30) {
         return c.json({ error: 'duration_sec harus antara 1–30 detik' }, 400);
     }
 
-    // Kirim MQTT command ke ESP32
+    // 1. Kirim MQTT command ke ESP32 (Hanya ini tugasnya!)
     const mqttSent = publishFeedCommand(device_id, duration_sec);
 
-    // Catat di feeding_logs (trigger = 'remote' karena dari API/app)
-    const { data, error } = await supabase
-        .from('feeding_logs')
-        .insert([{
-            device_id,
-            trigger_type: 'remote',
-            duration_sec,
-            notes,
-        }])
-        .select()
-        .single();
+    if (!mqttSent) {
+        return c.json({ error: 'Gagal mengirim perintah ke alat (MQTT disconnected)' }, 500);
+    }
 
-    if (error) return c.json({ error: error.message }, 500);
+    // 2. HAPUS KODE INSERT SUPABASE DI SINI!
+    // Kita tunggu ESP32 publish balik ke topic feeding, 
+    // biar file mqttClient.js -> handleFeedingLog() yang melakukan insert ke DB.
 
     return c.json({
-        message:   'Feeding command sent',
-        mqtt_sent: mqttSent,
-        data,
-    }, 201);
+        message: 'Perintah pakan berhasil dikirim ke ESP32',
+        duration_sec: duration_sec
+    }, 200);
 });
 
 export default app;

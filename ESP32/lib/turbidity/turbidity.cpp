@@ -89,6 +89,7 @@ void turbidityLoop() {
         int rawSample = turbidity_read_raw_samples(TURBIDITY_AO_PIN, TURBIDITY_NUM_SAMPLES);
         
         // 2. Validasi data
+        turbData.raw = rawSample + calibrationOffset;
         if (turbidity_validate_reading(rawSample)) {
             // 3. Tambah ke buffer (edge computing)
             turbidity_update_buffer(rawSample);
@@ -210,14 +211,13 @@ bool turbidity_validate_reading(int raw) {
  * Digunakan untuk edge computing & trend detection
  */
 void turbidity_update_buffer(int newValue) {
-    adc_buffer[buffer_index] = newValue;
+    int calibrated = newValue + calibrationOffset;
+    adc_buffer[buffer_index] = calibrated;
     buffer_index = (buffer_index + 1) % TURBIDITY_BUFFER_SIZE;
     
     if (buffer_index == 0) {
         buffer_full = true;
     }
-    
-    // Update filtered value = moving average
     int sum = 0;
     int count = buffer_full ? TURBIDITY_BUFFER_SIZE : buffer_index;
     
@@ -225,7 +225,7 @@ void turbidity_update_buffer(int newValue) {
         sum += adc_buffer[i];
     }
     
-    turbData.raw = newValue + calibrationOffset;
+    turbData.raw = calibrated;
     turbData.filtered = sum / count;
 }
 

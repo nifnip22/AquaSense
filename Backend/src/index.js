@@ -4,6 +4,8 @@ import { Hono }       from 'hono';
 import { cors }       from 'hono/cors';
 import { logger }     from 'hono/logger';
 import { serve }      from '@hono/node-server';
+import { startWABot } from './bot/waBot.js'
+import { setWASocket } from './bot/alertBot.js'
 
 import sensorRoutes  from './routes/sensors.js';
 import alertRoutes   from './routes/alerts.js';
@@ -48,3 +50,7 @@ serve({ fetch: app.fetch, port: PORT }, () => {
 
 // ── Start MQTT Client ─────────────────────────────────────────
 startMqttClient();
+
+const waSocket = await startWABot()
+setWASocket(waSocket)
+console.log('🤖 AquaBot WhatsApp starting...')

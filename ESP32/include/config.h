@@ -57,11 +57,40 @@
 // RAW ADC thresholds — sinkron dengan Backend/src/services/thresholds.js
 // Semakin TINGGI raw ADC → air semakin JERNIH
 // Semakin RENDAH raw ADC → air semakin KERUH
-#define TURBIDITY_RAW_CLEAR_MIN    2001  // ADC >= ini → terlalu jernih
-#define TURBIDITY_RAW_OPTIMAL_MAX  2000  // batas atas optimal
-#define TURBIDITY_RAW_OPTIMAL_MIN   900  // batas bawah optimal
-#define TURBIDITY_RAW_WARNING_MAX   800  // ADC <= ini → danger
+#define TURBIDITY_RAW_CLEAR_MIN    2501  // ADC >= ini → terlalu jernih
+#define TURBIDITY_RAW_OPTIMAL_MAX  2500  // batas atas optimal
+#define TURBIDITY_RAW_OPTIMAL_MIN  1001  // batas bawah optimal
+#define TURBIDITY_RAW_WARNING_MAX  1000  // ADC <= ini → danger
 
+
+// ═════════════════════════════════════════════════════════════
+// 5. PH-4502C
+// ═════════════════════════════════════════════════════════════
+// Wiring:
+// VCC          →   5V (VIN)
+// GND          →   GND
+// PO (Analog)  →   GPIO 32 (ADC input-only)
+
+#define PH_PIN                  32      // GPIO analog input
+
+#define PH_NUM_SAMPLES          10      // sampel rata-rata
+#define PH_SAMPLE_INTERVAL      10      // ms antar sampel
+#define PH_READ_INTERVAL        1000    // ms antar pembacaan
+
+#define PH_FILTER_ALPHA         0.15f   // EMA filter (lebih halus)
+
+// Threshold optimal ikan nila
+#define PH_KRITIS_MAX           9.0f
+#define PH_TOLERANSI_MAX        8.5f
+#define PH_MAX                  7.5f
+#define PH_MIN                  6.5f
+#define PH_TOLERANSI_MIN        6.0f
+#define PH_KRITIS_MIN           5.0f
+
+// Default kalibrasi (dipakai sebelum kalibrasi manual)
+// Nilai ini AKAN ditimpa setelah kalibrasi disimpan ke NVS
+#define PH_DEFAULT_SLOPE        -5.70f  // volt per pH unit (approx)
+#define PH_DEFAULT_INTERCEPT    21.34f  // intercept
 
 // ═════════════════════════════════════════════════════════════
 // 3. FEED LEVEL SENSOR — VL53L0X V2 (Time-of-Flight, I2C)
@@ -123,8 +152,8 @@
 // fisik Anda. Gunakan sketch test_servo_calibration.txt di folder
 // /test untuk mencari sudut tertutup & terbuka yang pas sebelum
 // mengubah nilai default di bawah ini.
-#define SERVO_ANGLE_CLOSED          0       // derajat — posisi tertutup
-#define SERVO_ANGLE_OPEN            90      // derajat — posisi terbuka
+#define SERVO_ANGLE_CLOSED          90       // derajat — posisi tertutup
+#define SERVO_ANGLE_OPEN            0      // derajat — posisi terbuka
  
 // Pulse width (mikrosekon) — range umum yang aman untuk MG996R
 #define SERVO_PULSE_MIN_US          500
@@ -135,36 +164,6 @@
 #define SERVO_DEFAULT_OPEN_SEC      3       // detik — default fallback
 #define SERVO_MIN_OPEN_SEC          1       // detik — batas bawah (safety)
 #define SERVO_MAX_OPEN_SEC          30      // detik — batas atas (safety)
-
-
-// ═════════════════════════════════════════════════════════════
-// 5. PH-4502C
-// ═════════════════════════════════════════════════════════════
-// Wiring:
-// VCC          →   5V (VIN)
-// GND          →   GND
-// PO (Analog)  →   GPIO 32 (ADC input-only)
-
-#define PH_PIN                  32      // GPIO analog input
-
-#define PH_NUM_SAMPLES          10      // sampel rata-rata
-#define PH_SAMPLE_INTERVAL      10      // ms antar sampel
-#define PH_READ_INTERVAL        1000    // ms antar pembacaan
-
-#define PH_FILTER_ALPHA         0.15f   // EMA filter (lebih halus)
-
-// Threshold optimal ikan nila
-#define PH_KRITIS_MAX           9.0f
-#define PH_TOLERANSI_MAX        8.5f
-#define PH_MAX                  7.5f
-#define PH_MIN                  6.5f
-#define PH_TOLERANSI_MIN        6.0f
-#define PH_KRITIS_MIN           5.0f
-
-// Default kalibrasi (dipakai sebelum kalibrasi manual)
-// Nilai ini AKAN ditimpa setelah kalibrasi disimpan ke NVS
-#define PH_DEFAULT_SLOPE        -5.70f  // volt per pH unit (approx)
-#define PH_DEFAULT_INTERCEPT    21.34f  // intercept
 
 
 // ═════════════════════════════════════════════════════════════

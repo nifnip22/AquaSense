@@ -40,6 +40,7 @@ export function startMqttClient() {
             else     console.log(`[MQTT] 📡 Subscribe: ${TOPIC_SENSORS}, ${TOPIC_FEEDING}`);
         });
         startPollingMixerStatus();
+        startPollingFeederStatus();
     });
 
     client.on('message', async (topic, payload) => {
@@ -62,13 +63,16 @@ export function startMqttClient() {
  * Topic  : aquasense/{device_id}/command/feed
  * Payload: { "duration_sec": N }
  */
-export function publishFeedCommand(device_id, duration_sec) {
+export function publishFeedCommand(device_id, duration_sec, trigger_type = 'remote') {
     if (!client?.connected) {
         console.warn('[MQTT] Tidak terhubung, gagal kirim command feed.');
         return false;
     }
     const topic   = `aquasense/${device_id}/command/feed`;
-    const payload = JSON.stringify({ duration_sec });
+    
+    // 💡 KUNCI PERBAIKAN: Kirim trigger_type agar riwayat database akurat
+    const payload = JSON.stringify({ duration_sec, trigger_type }); 
+    
     client.publish(topic, payload, { qos: 1 });
     console.log(`[MQTT] 🐟 Feed command → ${topic} | ${payload}`);
     return true;
@@ -277,7 +281,7 @@ async function handleFeedingLog(device_id, raw) {
 let lastMixerState = null;
 
 export function startPollingMixerStatus() {
-    console.log('⏳ Memulai polling mixer_status setiap 3 detik...');
+    console.log('⏳ Memulai polling mixer_status setiap 1 detik...');
 
     setInterval(async () => {
         try {
@@ -301,6 +305,49 @@ export function startPollingMixerStatus() {
             lastMixerState = data.is_on;
         } catch (err) {
             console.error('⚠️ Error polling mixer_status:', err);
+        }
+    }, 1000);
+}
+
+let lastFeederState = false;
+
+export function startPollingFeederStatus() {
+    console.log('⏳ Memulai polling feeder_status setiap 3 detik...');
+
+    setInterval(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('feeder_status')
+                .select('*')
+                .eq('id', 1)
+                .single();
+
+            if (error) {
+                console.error('❌ Gagal polling feeder DB:', error.message);
+                return;
+            }
+
+            // Jika tombol di aplikasi di-klik (menjadi true)
+            if (data.is_on === true && lastFeederState === false) {
+                console.log(`🔔 Tombol Pakan diklik dari Frontend! Durasi: ${data.duration_sec}s`);
+                
+                // 1. Kirim perintah pakan ke ESP32
+                publishFeedCommand(data.device_id, data.duration_sec, 'manual');
+
+                // 2. Langsung reset is_on kembali ke false di Supabase
+                // Ini penting agar tombol di aplikasi kembali mati & perintah tidak dikirim berulang
+                await supabase
+                    .from('feeder_status')
+                    .update({ 
+                        is_on: false, 
+                        updated_at: new Date().toISOString() 
+                    })
+                    .eq('id', 1);
+            }
+
+            lastFeederState = data.is_on;
+        } catch (err) {
+            console.error('⚠️ Error polling feeder_status:', err);
         }
     }, 3000);
 }
