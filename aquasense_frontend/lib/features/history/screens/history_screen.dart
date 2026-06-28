@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/widgets/custom_app_bar.dart';
 import '../widgets/history_filter_chips.dart';
@@ -8,6 +8,7 @@ import '../widgets/date_section_header.dart';
 import '../widgets/history_log_card.dart';
 import 'alert_detail_screen.dart';
 import '../models/alert_model.dart';
+import '../providers/history_provider.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -17,37 +18,23 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  late Future<List<AlertModel>> _futureAlerts;
-
   int _currentPage = 0;
   final int _itemsPerPage = 5;
-
   String _selectedFilter = 'All';
 
   @override
   void initState() {
     super.initState();
-    _futureAlerts = fetchAlertHistory();
-  }
-
-  Future<List<AlertModel>> fetchAlertHistory() async {
-    final supabase = Supabase.instance.client;
-    final response = await supabase
-        .from('alerts')
-        .select()
-        .order('created_at', ascending: false)
-        .limit(
-          50,
-        );
-
-    return response.map((json) => AlertModel.fromJson(json)).toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HistoryProvider>().fetchLogs();
+    });
   }
 
   Future<void> _refreshData() async {
     setState(() {
       _currentPage = 0;
-      _futureAlerts = fetchAlertHistory();
     });
+    await context.read<HistoryProvider>().fetchLogs();
   }
 
   @override
@@ -68,8 +55,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 onFilterSelected: (filter) {
                   setState(() {
                     _selectedFilter = filter;
-                    _currentPage =
-                        0;
+                    _currentPage = 0;
                   });
                 },
               ),
@@ -78,10 +64,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const DateSectionHeader(dateText: 'Recent Logs'),
               const SizedBox(height: 16),
 
-              FutureBuilder<List<AlertModel>>(
-                future: _futureAlerts,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+              Consumer<HistoryProvider>(
+                builder: (context, provider, child) {
+                  // 1. Tampilkan Loading
+                  if (provider.isLoading && provider.alerts.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
                       child: Center(
@@ -92,38 +78,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     );
                   }
 
-                  if (snapshot.hasError) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Center(
-                        child: Text(
-                          'Gagal memuat data.\n${snapshot.error}',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(color: Colors.red),
-                        ),
-                      ),
-                    );
-                  }
-
-                  final allAlerts = snapshot.data ?? [];
+                  final allAlerts = provider.alerts;
 
                   List<AlertModel> filteredAlerts = allAlerts;
                   if (_selectedFilter.toUpperCase() != 'ALL') {
                     filteredAlerts = allAlerts.where((alert) {
                       final type = alert.type.toUpperCase();
-                      if (_selectedFilter.toUpperCase() == 'ALERTS' &&
-                          type == 'ALERT') {
+                      if (_selectedFilter.toUpperCase() == 'ALERTS' && type == 'ALERT') {
                         return true;
                       }
-                      if (_selectedFilter.toUpperCase() == 'FEEDING' &&
-                          type == 'FEEDING') {
+                      if (_selectedFilter.toUpperCase() == 'FEEDING' && type == 'FEEDING') {
                         return true;
                       }
-                      if (_selectedFilter.toUpperCase() == 'SYSTEM' &&
-                          type == 'SYSTEM') {
+                      if (_selectedFilter.toUpperCase() == 'SYSTEM' && type == 'SYSTEM') {
                         return true;
                       }
-
                       return type == _selectedFilter.toUpperCase();
                     }).toList();
                   }
@@ -134,13 +103,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       child: Center(
                         child: Text(
                           'Sistem normal. Belum ada log history untuk $_selectedFilter.',
+                          style: GoogleFonts.plusJakartaSans(),
                         ),
                       ),
                     );
                   }
 
-                  final int totalPages = (filteredAlerts.length / _itemsPerPage)
-                      .ceil();
+                  final int totalPages = (filteredAlerts.length / _itemsPerPage).ceil();
 
                   if (_currentPage >= totalPages) {
                     _currentPage = totalPages - 1 > 0 ? totalPages - 1 : 0;
@@ -182,8 +151,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
                             totalPages,
-                            (index) =>
-                                _buildDot(isActive: index == _currentPage),
+                            (index) => _buildDot(isActive: index == _currentPage),
                           ),
                         ),
                       ),
@@ -232,20 +200,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Color(0xFFC62828),
-              size: 12,
-            ),
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFC62828), size: 12),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
                 '$timeString • ${alert.description}',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFFC62828),
-                ),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFC62828)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -255,27 +215,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
       );
     }
 
-    final card = HistoryLogCard(
+    Widget card = HistoryLogCard(
       title: alert.title,
-      iconData: iconData,
-      iconColor: iconColor,
-      iconBgColor: iconBgColor,
-      borderColor: borderColor,
+      iconData: alert.isResolved ? Icons.check_circle : iconData,
+      iconColor: alert.isResolved ? Colors.green : iconColor,
+      iconBgColor: alert.isResolved ? Colors.green.shade50 : iconBgColor,
+      borderColor: alert.isResolved ? Colors.green.shade200 : borderColor,
       subtitleText: customSubtitle == null ? subtitleText : null,
-      customSubtitle: customSubtitle,
-      showArrow: showArrow,
+      customSubtitle: alert.isResolved 
+          ? Text('${DateFormat('hh:mm a').format(alert.createdAt)} • Resolved', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11))
+          : customSubtitle,
+      showArrow: alert.isResolved ? false : showArrow,
     );
 
-    if (alert.type == 'ALERT') {
+    if (alert.isResolved) {
+      card = Opacity(
+        opacity: 0.55,
+        child: card,
+      );
+    }
+
+    if (alert.type == 'ALERT' && !alert.isResolved) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
         child: GestureDetector(
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => AlertDetailScreen(alert: alert),
-              ),
+              MaterialPageRoute(builder: (context) => AlertDetailScreen(alert: alert)),
             );
           },
           child: card,

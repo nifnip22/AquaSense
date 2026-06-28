@@ -5,6 +5,9 @@ class AlertModel {
   final String title;
   final String description;
   final bool isResolved;
+  final String sensorType; 
+  final double? value; 
+  final String? unit; 
 
   AlertModel({
     this.id,
@@ -13,11 +16,14 @@ class AlertModel {
     required this.title,
     required this.description,
     this.isResolved = false,
+    required this.sensorType,
+    this.value,
+    this.unit,
   });
 
   factory AlertModel.fromJson(Map<String, dynamic> json) {
-    String sensorName = json['sensor_type']?.toString().toUpperCase() ?? 'SYSTEM';
-    String generatedTitle = "$sensorName ALERT";
+    String rawSensorType = json['sensor_type']?.toString().toUpperCase() ?? 'SYSTEM';
+    String generatedTitle = "$rawSensorType ALERT";
 
     String alertType = 'SYSTEM';
     if (json['severity'] == 'danger') {
@@ -28,11 +34,14 @@ class AlertModel {
 
     return AlertModel(
       id: json['id'],
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       type: alertType,
       title: generatedTitle,
       description: json['message'] ?? 'No description provided.',
       isResolved: json['resolved'] ?? false,
+      sensorType: rawSensorType,
+      value: json['value'] != null ? double.tryParse(json['value'].toString()) : null,
+      unit: json['unit']?.toString() ?? '',
     );
   }
 }
