@@ -4,6 +4,8 @@ import '../../../shared/widgets/secondary_app_bar.dart';
 import '../widgets/device_info_card.dart';
 import '../widgets/calibration_section.dart';
 import '../widgets/thresholds_section.dart';
+import 'package:provider/provider.dart';
+import '../providers/settings_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -22,8 +24,57 @@ class SettingsScreen extends StatelessWidget {
             const CalibrationSection(),
             const SizedBox(height: 32),
             const ThresholdsSection(),
+            const SizedBox(height: 16),
+            Consumer<SettingsProvider>(
+              builder: (context, settings, child) {
+                return Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(color: Color(0xFFFFF3E0), shape: BoxShape.circle),
+                            child: const Icon(Icons.restaurant, color: Color(0xFFFF9800), size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('Manual Feed Duration', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Set the motor rotation duration (1-15 seconds) when giving manual feed.', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey.shade600)),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Text('${settings.manualFeedDuration}s', style: GoogleFonts.epilogue(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFFFF9800))),
+                          Expanded(
+                            child: Slider(
+                              value: settings.manualFeedDuration.toDouble(),
+                              min: 1,
+                              max: 15,
+                              divisions: 14,
+                              activeColor: const Color(0xFFFF9800),
+                              inactiveColor: const Color(0xFFFFF3E0),
+                              onChanged: (val) {
+                                settings.updateManualFeedDuration(val.toInt());
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                );
+              }
+            ),
             const SizedBox(height: 40),
-            
             // Action Buttons
             SizedBox(
               width: double.infinity,

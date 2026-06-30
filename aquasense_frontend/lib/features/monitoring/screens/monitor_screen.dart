@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/sensor_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
+import '../../settings/providers/settings_provider.dart';
 
 class MonitorScreen extends StatelessWidget {
   const MonitorScreen({super.key});
@@ -10,7 +12,11 @@ class MonitorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sensorState = context.watch<SensorProvider>();
+    final settingsState = context.watch<SettingsProvider>();
     final data = sensorState.currentData;
+    final lastFedTime = sensorState.lastFed != null 
+        ? '${DateFormat('HH:mm').format(sensorState.lastFed!)} WITA'
+        : '--:--';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -76,7 +82,6 @@ class MonitorScreen extends StatelessWidget {
               height: 56,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  // Jika sedang dispensing, ubah warna menjadi abu-abu
                   backgroundColor: sensorState.isDispensing 
                       ? Colors.grey.shade400 
                       : const Color(0xFF003355),
@@ -84,11 +89,9 @@ class MonitorScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                // LOGIKA ANTI-SPAM: Jika isDispensing TRUE, onPressed menjadi null (disabled)
                 onPressed: sensorState.isDispensing
                     ? null 
                     : () async {
-                        // Tampilkan indikasi awal ke pengguna
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: const Text('Mengirim perintah ke dispenser pakan...'),
@@ -97,7 +100,7 @@ class MonitorScreen extends StatelessWidget {
                           ),
                         );
 
-                        final sukses = await sensorState.dispenseFeedManual(5);
+                        final sukses = await sensorState.dispenseFeedManual(settingsState.manualFeedDuration);
                         
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -114,9 +117,8 @@ class MonitorScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Teks berubah dinamis sesuai status gembok
                     Text(
-                      sensorState.isDispensing ? 'COOLING DOWN (10s)...' : 'DISPENSE FEED', 
+                      sensorState.isDispensing ? 'DISPENSING & COOLING DOWN...' : 'DISPENSE FEED', 
                       style: const TextStyle(fontWeight: FontWeight.bold)
                     ),
                     sensorState.isDispensing
@@ -133,57 +135,84 @@ class MonitorScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Water Pump Status
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.water, color: Colors.black54),
-                          SizedBox(width: 8),
-                          Text(
-                            'Water Pump',
-                            style: TextStyle(color: Colors.black87),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(color: Color(0xFFE0F7FA), shape: BoxShape.circle),
+                              child: const Icon(Icons.autorenew, color: Color(0xFF00BCD4), size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('MIXER', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black54, letterSpacing: 0.5)),
+                          ],
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Standby',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Text('STANDBY', style: GoogleFonts.epilogue(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
+                      ],
+                    ),
                   ),
-                  const Divider(height: 24),
-                  const Row(
-                    children: [
-                      Icon(Icons.access_time, size: 16, color: Colors.black54),
-                      SizedBox(width: 8),
-                      Text(
-                        'Last fed: 16:30 WITA',
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                    ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(color: Color(0xFFFFF3E0), shape: BoxShape.circle),
+                              child: const Icon(Icons.restaurant, color: Color(0xFFFF9800), size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('LAST FED', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black54, letterSpacing: 0.5)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(lastFedTime, style: GoogleFonts.epilogue(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            const SizedBox(height: 32),
           ],
         ),
       ),

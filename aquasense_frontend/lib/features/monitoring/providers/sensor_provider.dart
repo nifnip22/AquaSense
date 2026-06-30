@@ -39,8 +39,12 @@ class SensorProvider extends ChangeNotifier {
   bool _isDeviceOnline = false;
   bool get isDeviceOnline => _isDeviceOnline;
 
+  DateTime? _lastFed;
+  DateTime? get lastFed => _lastFed;
+
   SensorProvider() {
     _startRealDataFetch();
+    fetchLastFedTime();
   }
 
   // === FETCH DATA FROM DATABASE FUNCTION ===
@@ -172,6 +176,7 @@ class SensorProvider extends ChangeNotifier {
     notifyListeners();
 
     final String deviceId = 'ESP32-DEVKIT-01';
+    final int cooldownTime = durationSec + 5;
     
     try {
       await _supabase.from('feeder_status').upsert({
@@ -182,7 +187,7 @@ class SensorProvider extends ChangeNotifier {
         'updated_at': DateTime.now().toIso8601String(),
       });
       
-      Future.delayed(const Duration(seconds: 10), () {
+      Future.delayed(Duration(seconds: cooldownTime), () {
         _isDispensing = false;
         notifyListeners();
       });
@@ -194,6 +199,24 @@ class SensorProvider extends ChangeNotifier {
       _isDispensing = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<void> fetchLastFedTime() async {
+    try {
+      final response = await _supabase
+          .from('feeding_logs')
+          .select('fed_at')
+          .order('fed_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response != null) {
+        _lastFed = DateTime.parse(response['fed_at']);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Gagal menarik data waktu pakan terakhir: $e');
     }
   }
 
