@@ -115,4 +115,33 @@ class SettingsProvider extends ChangeNotifier {
       debugPrint('Gagal update durasi pakan: $e');
     }
   }
+
+  Future<void> resetToDefaultSettings() async {
+    final defaultPhMin = 6.5;
+    final defaultPhMax = 8.5;
+    final defaultTempMax = 32.0;
+    final defaultTurbidityMax = 2000.0;
+    final defaultManualFeed = 5;
+
+    _phMin = defaultPhMin;
+    _phMax = defaultPhMax;
+    _tempMax = defaultTempMax;
+    _turbidityMax = defaultTurbidityMax;
+    _manualFeedDuration = defaultManualFeed;
+    notifyListeners();
+
+    try {
+      await _supabase.from('device_settings').upsert({
+        'id': _deviceId,
+        'ph_min': defaultPhMin,
+        'ph_max': defaultPhMax,
+        'temp_max': defaultTempMax,
+        'turbidity_max': defaultTurbidityMax,
+        'manual_feed_duration': defaultManualFeed,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Gagal mereset pengaturan: $e');
+    }
+  }
 }
