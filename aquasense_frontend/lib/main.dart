@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'features/monitoring/providers/sensor_provider.dart';
 import 'features/feeding/providers/mixer_provider.dart';
 import 'features/settings/providers/settings_provider.dart';
@@ -13,8 +14,9 @@ import 'shared/widgets/network_monitor.dart';
 
 void main() async {
   // Make sure Flutter bindings are initialized before we do anything else, especially before we load environment variables or initialize Supabase.
-  WidgetsFlutterBinding.ensureInitialized();
-
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  
   // Load credentials from the .env file.
   await dotenv.load(fileName: ".env");
 
@@ -23,6 +25,9 @@ void main() async {
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+
+  await Future.delayed(const Duration(seconds: 2));
+  FlutterNativeSplash.remove();
 
   runApp(
     /*Using MultiProvider to set up our providers for state management. 
