@@ -33,7 +33,7 @@ class NotificationService {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'aquasense_alert_channel', 
       'AquaSense Alerts', 
-      channelDescription: 'Notifikasi peringatan sistem IoT kolam',
+      channelDescription: 'Pool IoT system alert notification',
       importance: Importance.max,
       priority: Priority.high,
       color: Color(0xFF003355),

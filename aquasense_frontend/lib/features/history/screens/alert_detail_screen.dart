@@ -32,11 +32,11 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
     if (success) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Peringatan berhasil diselesaikan!'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('Alert successfully resolved!'), backgroundColor: Colors.green),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal memperbarui status.'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Failed to update status.'), backgroundColor: Colors.red),
       );
     }
   }

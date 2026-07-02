@@ -29,7 +29,7 @@ class MixerProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Gagal mengambil status mixer: $e');
+      debugPrint('Failed to fetch mixer status: $e');
     }
   }
 
@@ -53,7 +53,7 @@ class MixerProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Gagal mengubah saklar mixer: $e');
+      debugPrint('Failed to toggle mixer: $e');
       fetchMixerStatus();
       return false;
     }
@@ -65,7 +65,7 @@ class MixerProvider extends ChangeNotifier {
       final response = await _supabase.from('mixer_schedules').select().order('schedule_time', ascending: true);
       _mixerSchedules = response.map((json) => MixerScheduleModel.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('Gagal mengambil jadwal mixer: $e');
+      debugPrint('Failed to fetch mixer schedules: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -79,7 +79,7 @@ class MixerProvider extends ChangeNotifier {
       await fetchMixerSchedules();
       return true;
     } catch (e) {
-      debugPrint('Gagal menambah jadwal mixer: $e');
+      debugPrint('Failed to add mixer schedule: $e');
       return false;
     }
   }
@@ -90,7 +90,7 @@ class MixerProvider extends ChangeNotifier {
       notifyListeners();
       await _supabase.from('mixer_schedules').delete().eq('id', id);
     } catch (e) {
-      debugPrint('Gagal menghapus jadwal mixer: $e');
+      debugPrint('Failed to delete mixer schedule: $e');
       fetchMixerSchedules();
     }
   }
@@ -115,7 +115,7 @@ class MixerProvider extends ChangeNotifier {
           .eq('id', scheduleId);
 
     } catch (e) {
-      debugPrint('Gagal mengubah status jadwal mixer: $e');
+      debugPrint('Failed to update mixer schedule status: $e');
       fetchMixerSchedules();
     }
   }

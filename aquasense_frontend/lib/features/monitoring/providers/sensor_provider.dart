@@ -103,7 +103,7 @@ class SensorProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Gagal menarik data asli: $e');
+      debugPrint('Failed to pull original data: $e');
     }
   }
 
@@ -160,7 +160,7 @@ class SensorProvider extends ChangeNotifier {
         _timeIndex = x; 
       }
     } catch (e) {
-      debugPrint('Gagal menarik riwayat grafik: $e');
+      debugPrint('Failed to pull chart history: $e');
     } finally {
       _isChartLoading = false;
       notifyListeners();
@@ -194,7 +194,7 @@ class SensorProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      debugPrint('Gagal memicu pemberian pakan: $e');
+      debugPrint('Failed to trigger manual feeding: $e');
       
       _isDispensing = false;
       notifyListeners();
@@ -216,7 +216,7 @@ class SensorProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Gagal menarik data waktu pakan terakhir: $e');
+      debugPrint('Failed to pull last fed time: $e');
     }
   }
 

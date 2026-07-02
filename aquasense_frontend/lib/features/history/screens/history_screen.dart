@@ -102,7 +102,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 40),
                       child: Center(
                         child: Text(
-                          'Sistem normal. Belum ada log history untuk $_selectedFilter.',
+                          'System is normal. No history logs available for $_selectedFilter.',
                           style: GoogleFonts.plusJakartaSans(),
                         ),
                       ),

@@ -58,7 +58,7 @@ class _StatisticScreenState extends State<StatisticScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Menyiapkan data grafik...',
+                    'Preparing chart data...',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

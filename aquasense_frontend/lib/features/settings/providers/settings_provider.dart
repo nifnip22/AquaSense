@@ -68,7 +68,7 @@ class SettingsProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      debugPrint('Belum ada data di Supabase atau gagal memuat: $e');
+      debugPrint('There is no data in Supabase or it failed to load: $e');
     }
   }
 
@@ -82,7 +82,7 @@ class SettingsProvider extends ChangeNotifier {
       
       await _loadDeviceSettings();
     } catch (e) {
-      debugPrint('Gagal update $column: $e');
+      debugPrint('Failed to update $column: $e');
     }
   }
 
@@ -97,7 +97,7 @@ class SettingsProvider extends ChangeNotifier {
       
       await _loadDeviceSettings();
     } catch (e) {
-      debugPrint('Gagal update pH Range: $e');
+      debugPrint('Failed to update pH Range: $e');
     }
   }
 
@@ -112,7 +112,7 @@ class SettingsProvider extends ChangeNotifier {
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      debugPrint('Gagal update durasi pakan: $e');
+      debugPrint('Failed to update manual feed duration: $e');
     }
   }
 
@@ -141,7 +141,7 @@ class SettingsProvider extends ChangeNotifier {
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      debugPrint('Gagal mereset pengaturan: $e');
+      debugPrint('Failed to reset settings: $e');
     }
   }
 }

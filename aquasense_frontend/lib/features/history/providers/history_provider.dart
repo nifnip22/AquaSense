@@ -31,7 +31,7 @@ class HistoryProvider extends ChangeNotifier {
 
       _alerts = response.map((json) => AlertModel.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('Gagal menarik data log riwayat: $e');
+      debugPrint('Failed to fetch logs: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -46,11 +46,11 @@ class HistoryProvider extends ChangeNotifier {
       callback: (payload) {
         final newRecord = payload.newRecord;
         final sensorType = newRecord['sensor_type']?.toString().toUpperCase() ?? 'SISTEM';
-        final message = newRecord['message']?.toString() ?? 'Silakan cek aplikasi AquaSense untuk detail peringatan.';
+        final message = newRecord['message']?.toString() ?? 'Please check the AquaSense app for alert details.';
         
         NotificationService().showNotification(
           id: DateTime.now().millisecondsSinceEpoch ~/ 1000, 
-          title: 'Peringatan: $sensorType',
+          title: 'Alert: $sensorType',
           body: message,
         );
 
@@ -72,7 +72,7 @@ class HistoryProvider extends ChangeNotifier {
       await fetchLogs(); 
       return true;
     } catch (e) {
-      debugPrint('Gagal meresolve alert: $e');
+      debugPrint('Failed to resolve alert: $e');
       return false;
     }
   }
@@ -88,7 +88,7 @@ class HistoryProvider extends ChangeNotifier {
       });
       return true;
     } catch (e) {
-      debugPrint('Gagal mengirim perintah ke Mixer: $e');
+      debugPrint('Failed to send command to Mixer: $e');
       return false;
     }
   }

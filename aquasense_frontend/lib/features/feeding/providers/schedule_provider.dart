@@ -27,7 +27,7 @@ class ScheduleProvider extends ChangeNotifier {
 
       _schedules = response.map((json) => ScheduleModel.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('Gagal mengambil jadwal: $e');
+      debugPrint('Failed to fetch schedules: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -41,7 +41,7 @@ class ScheduleProvider extends ChangeNotifier {
       await fetchSchedules();
       return true;
     } catch (e) {
-      debugPrint('Gagal menambah jadwal: $e');
+      debugPrint('Failed to add schedule: $e');
       return false;
     }
   }
@@ -66,7 +66,7 @@ class ScheduleProvider extends ChangeNotifier {
           .eq('id', scheduleId);
 
     } catch (e) {
-      debugPrint('Gagal mengubah status jadwal: $e');
+      debugPrint('Failed to update schedule status: $e');
       fetchSchedules();
     }
   }
@@ -77,7 +77,7 @@ class ScheduleProvider extends ChangeNotifier {
       notifyListeners();
       await _supabase.from('feeding_schedules').delete().eq('id', scheduleId);
     } catch (e) {
-      debugPrint('Gagal menghapus jadwal: $e');
+      debugPrint('Failed to delete schedule: $e');
       fetchSchedules();
     }
   }

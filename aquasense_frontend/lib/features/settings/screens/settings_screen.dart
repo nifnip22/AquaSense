@@ -40,14 +40,14 @@ class SettingsScreen extends StatelessWidget {
               Navigator.pop(ctx);
               
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mereset pengaturan...'), duration: Duration(seconds: 1)),
+                const SnackBar(content: Text('Resetting settings...'), duration: Duration(seconds: 1)),
               );
               
               await context.read<SettingsProvider>().resetToDefaultSettings();
               
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Pengaturan berhasil dikembalikan ke default!'), backgroundColor: Color(0xFF007B83)),
+                  const SnackBar(content: Text('Settings reset to default!'), backgroundColor: Color(0xFF007B83)),
                 );
               }
             },

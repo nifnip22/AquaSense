@@ -169,7 +169,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 if (!sukses && context.mounted && mixerProvider.isCooldownActive) {
                                   // ignore: use_build_context_synchronously
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Sistem proteksi aktif! Beri jeda sejenak setelah mematikan mesin.')),
+                                    const SnackBar(content: Text('Protection system active! Give a short pause after turning off the engine.')),
                                   );
                                 }
                               },

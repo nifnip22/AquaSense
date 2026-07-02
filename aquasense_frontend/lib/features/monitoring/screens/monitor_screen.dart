@@ -94,7 +94,7 @@ class MonitorScreen extends StatelessWidget {
                     : () async {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Mengirim perintah ke dispenser pakan...'),
+                            content: const Text('Sending command to feed dispenser...'),
                             duration: const Duration(seconds: 2),
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -106,8 +106,8 @@ class MonitorScreen extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(sukses 
-                                  ? 'Pakan berhasil dikeluarkan! Memulai masa cooldown alat...' 
-                                  : 'Gagal menghubungi server.'),
+                                  ? 'Feed successfully dispensed! Starting device cooldown...' 
+                                  : 'Failed to contact server.'),
                               backgroundColor: sukses ? const Color(0xFF0288D1) : Colors.red,
                               behavior: SnackBarBehavior.floating,
                             ),

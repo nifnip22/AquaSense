@@ -61,7 +61,7 @@ class _NetworkMonitorState extends State<NetworkMonitor> {
                       const Icon(Icons.wifi_off, color: Colors.white, size: 14),
                       const SizedBox(width: 8),
                       Text(
-                        'Tidak Ada Koneksi Internet',
+                        'No Internet Connection',
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontSize: 12,
