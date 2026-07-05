@@ -5,6 +5,7 @@ import '../providers/sensor_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:aquasense_frontend/shared/widgets/custom_app_bar.dart';
 import '../../settings/providers/settings_provider.dart';
+import '../../feeding/providers/mixer_provider.dart';
 
 class MonitorScreen extends StatelessWidget {
   const MonitorScreen({super.key});
@@ -14,7 +15,8 @@ class MonitorScreen extends StatelessWidget {
     final sensorState = context.watch<SensorProvider>();
     final settingsState = context.watch<SettingsProvider>();
     final data = sensorState.currentData;
-    final lastFedTime = sensorState.lastFed != null 
+    final mixerState = context.watch<MixerProvider>();
+    final lastFedTime = sensorState.lastFed != null
         ? '${DateFormat('HH:mm').format(sensorState.lastFed!)} WITA'
         : '--:--';
 
@@ -82,33 +84,64 @@ class MonitorScreen extends StatelessWidget {
               height: 56,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: sensorState.isDispensing 
-                      ? Colors.grey.shade400 
+                  backgroundColor: sensorState.isDispensing
+                      ? Colors.grey.shade400
                       : const Color(0xFF003355),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
                 onPressed: sensorState.isDispensing
-                    ? null 
+                    ? null
                     : () async {
+                        if (!sensorState.isDeviceOnline) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(
+                                    Icons.wifi_off,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Failed: ESP32 device is offline!',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Color(0xFFC62828),
+                              duration: Duration(seconds: 3),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Sending command to feed dispenser...'),
+                            content: Text(
+                              'Sending command (${settingsState.manualFeedDuration} seconds)...',
+                            ),
                             duration: const Duration(seconds: 2),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
-
-                        final sukses = await sensorState.dispenseFeedManual(settingsState.manualFeedDuration);
-                        
+                        final sukses = await sensorState.dispenseFeedManual(
+                          settingsState.manualFeedDuration,
+                        );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(sukses 
-                                  ? 'Feed successfully dispensed! Starting device cooldown...' 
-                                  : 'Failed to contact server.'),
-                              backgroundColor: sukses ? const Color(0xFF0288D1) : Colors.red,
+                              content: Text(
+                                sukses
+                                    ? 'Feed successfully dispensed! Starting device cooldown...'
+                                    : 'Failed to contact server.',
+                              ),
+                              backgroundColor: sukses
+                                  ? const Color(0xFF0288D1)
+                                  : Colors.red,
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
@@ -118,14 +151,19 @@ class MonitorScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      sensorState.isDispensing ? 'DISPENSING & COOLING DOWN...' : 'DISPENSE FEED', 
-                      style: const TextStyle(fontWeight: FontWeight.bold)
+                      sensorState.isDispensing
+                          ? 'DISPENSING & COOLING DOWN...'
+                          : 'DISPENSE FEED',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     sensorState.isDispensing
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
                         : const Icon(Icons.restaurant),
                   ],
@@ -148,7 +186,7 @@ class MonitorScreen extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.03),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
-                        )
+                        ),
                       ],
                     ),
                     child: Column(
@@ -158,15 +196,41 @@ class MonitorScreen extends StatelessWidget {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(color: Color(0xFFE0F7FA), shape: BoxShape.circle),
-                              child: const Icon(Icons.autorenew, color: Color(0xFF00BCD4), size: 16),
+                              decoration: BoxDecoration(
+                                color: mixerState.isOn ? const Color(0xFF0288D1) : const Color(0xFFE0F7FA),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.autorenew,
+                                color: mixerState.isOn ? Colors.white : const Color(0xFF00BCD4),
+                                size: 16,
+                              ),
                             ),
                             const SizedBox(width: 8),
-                            Text('MIXER', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black54, letterSpacing: 0.5)),
+                            Text(
+                              'MIXER',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.black54,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Text('STANDBY', style: GoogleFonts.epilogue(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            mixerState.isOn ? 'MIXING (${mixerState.remainingSec}s)' : 'STANDBY', 
+                            style: GoogleFonts.epilogue(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold, 
+                              // Teks menjadi oranye/biru jika menyala
+                              color: mixerState.isOn ? const Color(0xFFFF9800) : const Color(0xFF003355)
+                            )
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -183,7 +247,7 @@ class MonitorScreen extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.03),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
-                        )
+                        ),
                       ],
                     ),
                     child: Column(
@@ -193,18 +257,40 @@ class MonitorScreen extends StatelessWidget {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(color: Color(0xFFFFF3E0), shape: BoxShape.circle),
-                              child: const Icon(Icons.restaurant, color: Color(0xFFFF9800), size: 16),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFF3E0),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.restaurant,
+                                color: Color(0xFFFF9800),
+                                size: 16,
+                              ),
                             ),
                             const SizedBox(width: 8),
-                            Text('LAST FED', style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black54, letterSpacing: 0.5)),
+                            Text(
+                              'LAST FED',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.black54,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
-                          child: Text(lastFedTime, style: GoogleFonts.epilogue(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF003355))),
+                          child: Text(
+                            lastFedTime,
+                            style: GoogleFonts.epilogue(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF003355),
+                            ),
+                          ),
                         ),
                       ],
                     ),

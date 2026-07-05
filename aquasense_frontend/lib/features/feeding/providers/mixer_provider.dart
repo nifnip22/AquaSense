@@ -7,11 +7,14 @@ class MixerProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
 
   bool _isMixerOn = false;
+  int _remainingSec = 0;
   bool _isCooldownActive = false;
   bool _isLoading = false;
   List<MixerScheduleModel> _mixerSchedules = [];
 
   bool get isMixerOn => _isMixerOn;
+  bool get isOn => _isMixerOn; 
+  int get remainingSec => _remainingSec;
   bool get isCooldownActive => _isCooldownActive;
   bool get isLoading => _isLoading;
   List<MixerScheduleModel> get mixerSchedules => _mixerSchedules;
@@ -26,6 +29,7 @@ class MixerProvider extends ChangeNotifier {
       final response = await _supabase.from('mixer_status').select().eq('id', 1).maybeSingle();
       if (response != null) {
         _isMixerOn = response['is_on'] ?? false;
+        _remainingSec = response['remaining_sec'] ?? 0;
         notifyListeners();
       }
     } catch (e) {
@@ -33,14 +37,29 @@ class MixerProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> toggleMixer() async {
+  Future<bool> toggleMixer(int durationMin) async {
     if (_isCooldownActive) return false;
 
     final targetStatus = !_isMixerOn;
     
     try {
-      await _supabase.from('mixer_status').update({'is_on': targetStatus}).eq('id', 1);
+      final updateData = {
+        'is_on': targetStatus,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      if (targetStatus) {
+        final durationSec = durationMin * 60;
+        updateData['duration_sec'] = durationSec;
+        updateData['remaining_sec'] = durationSec;
+      } else {
+        updateData['remaining_sec'] = 0;
+      }
+
+      await _supabase.from('mixer_status').update(updateData).eq('id', 1);
+      
       _isMixerOn = targetStatus;
+      _remainingSec = targetStatus ? (durationMin * 60) : 0;
       
       if (!targetStatus) {
         _isCooldownActive = true;
@@ -55,6 +74,7 @@ class MixerProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Failed to toggle mixer: $e');
       fetchMixerStatus();
+      
       return false;
     }
   }

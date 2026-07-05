@@ -154,18 +154,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           Text(
                             mixerProvider.isCooldownActive 
                                 ? 'Waiting 5s for hardware safety...' 
-                                : (mixerProvider.isMixerOn ? 'The motor is running' : 'Motor in off position'),
+                                : (mixerProvider.isOn 
+                                    ? 'The motor is running (${mixerProvider.remainingSec}s)'
+                                    : 'Motor in off position'),
                             style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.black45),
                           ),
                         ],
                       ),
                       Switch(
-                        value: mixerProvider.isMixerOn,
+                        value: mixerProvider.isOn,
                         activeThumbColor: const Color(0xFF0288D1),
                         onChanged: mixerProvider.isCooldownActive 
                             ? null 
                             : (val) async {
-                                final sukses = await mixerProvider.toggleMixer();
+                                final sukses = await mixerProvider.toggleMixer(_defaultMixerDuration);
                                 if (!sukses && context.mounted && mixerProvider.isCooldownActive) {
                                   // ignore: use_build_context_synchronously
                                   ScaffoldMessenger.of(context).showSnackBar(

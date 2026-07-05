@@ -55,18 +55,22 @@ class SettingsProvider extends ChangeNotifier {
           .from('device_settings')
           .select()
           .eq('id', _deviceId)
-          .single();
+          .maybeSingle();
       
-      _phMin = (response['ph_min'] ?? 6.5).toDouble();
-      _phMax = (response['ph_max'] ?? 8.5).toDouble();
-      _tempMax = (response['temp_max'] ?? 32.0).toDouble();
-      _turbidityMax = (response['turbidity_max'] ?? 2000.0).toDouble();
-      _manualFeedDuration = (response['manual_feed_duration'] ?? 5).toInt();
-      _phOffset = (response['ph_offset'] ?? 0.0).toDouble();
-      _turbiditySensitivity = (response['turbidity_offset'] ?? 0.0).toDouble();
-      _waterLevelOffset = (response['water_level_offset'] ?? 0.0).toDouble();
-      
-      notifyListeners();
+      if (response != null) {
+        _phMin = (response['ph_min'] ?? 6.5).toDouble();
+        _phMax = (response['ph_max'] ?? 8.5).toDouble();
+        _tempMax = (response['temp_max'] ?? 32.0).toDouble();
+        _turbidityMax = (response['turbidity_max'] ?? 2000.0).toDouble();
+        _phOffset = (response['ph_offset'] ?? 0.0).toDouble();
+        _turbiditySensitivity = (response['turbidity_offset'] ?? 0.0).toDouble();
+        _waterLevelOffset = (response['water_level_offset'] ?? 0.0).toDouble();
+        _manualFeedDuration = (response['manual_feed_duration'] ?? 5).toInt();
+        
+        notifyListeners();
+      } else {
+        debugPrint('Info: The device_settings data for $_deviceId does not yet exist in the database.');
+      }
     } catch (e) {
       debugPrint('There is no data in Supabase or it failed to load: $e');
     }
