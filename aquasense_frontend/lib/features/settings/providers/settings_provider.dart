@@ -148,4 +148,31 @@ class SettingsProvider extends ChangeNotifier {
       debugPrint('Failed to reset settings: $e');
     }
   }
+
+  Future<bool> saveCalibration({
+    required double newPhOffset,
+    required double newTurbidityOffset,
+  }) async {
+    try {
+      final updateData = {
+        'ph_offset': newPhOffset,
+        'turbidity_offset': newTurbidityOffset,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      await _supabase
+          .from('device_settings')
+          .update(updateData)
+          .eq('id', _deviceId);
+
+      _phOffset = newPhOffset;
+      _turbiditySensitivity = newTurbidityOffset;
+      
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Failed to save calibration: $e');
+      throw Exception('Failed to update calibration: $e');
+    }
+  }
 }

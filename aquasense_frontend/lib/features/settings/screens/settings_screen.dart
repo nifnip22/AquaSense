@@ -1,3 +1,4 @@
+import 'package:aquasense_frontend/features/settings/widgets/calibration_section.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../shared/widgets/secondary_app_bar.dart';
@@ -69,8 +70,6 @@ class SettingsScreen extends StatelessWidget {
           children: [
             const DeviceInfoCard(),
             const SizedBox(height: 32),
-            // const CalibrationSection(),
-            // const SizedBox(height: 32),
             Consumer<SettingsProvider>(
               builder: (context, settings, child) {
                 return Container(
@@ -120,6 +119,8 @@ class SettingsScreen extends StatelessWidget {
                 );
               }
             ),
+            const SizedBox(height: 16),
+            const CalibrationSection(),
             const SizedBox(height: 16),
             const ThresholdsSection(),
             const SizedBox(height: 40),
