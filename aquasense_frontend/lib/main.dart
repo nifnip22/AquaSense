@@ -26,7 +26,7 @@ void main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  await Future.delayed(const Duration(seconds: 2));
+  await Future.delayed(const Duration(seconds: 1));
   FlutterNativeSplash.remove();
 
   runApp(
