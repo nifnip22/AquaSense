@@ -226,7 +226,6 @@ class MonitorScreen extends StatelessWidget {
                             style: GoogleFonts.epilogue(
                               fontSize: 18, 
                               fontWeight: FontWeight.bold, 
-                              // Teks menjadi oranye/biru jika menyala
                               color: mixerState.isOn ? const Color(0xFFFF9800) : const Color(0xFF003355)
                             )
                           ),

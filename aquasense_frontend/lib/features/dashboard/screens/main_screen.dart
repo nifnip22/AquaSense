@@ -31,7 +31,7 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: Container(
         padding: const EdgeInsets.only(top: 12, bottom: 24, left: 16, right: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7F9FC), // Warna latar belakang putih kebiruan
+          color: const Color(0xFFF7F9FC),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(32),
             topRight: Radius.circular(32),
@@ -56,9 +56,6 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-
-  // Jangan lupa import google_fonts di bagian paling atas file jika belum ada
-  // import 'package:google_fonts/google_fonts.dart';
 
   Widget _buildCustomNavItem({required IconData icon, required String label, required int index}) {
     final bool isSelected = _currentIndex == index;

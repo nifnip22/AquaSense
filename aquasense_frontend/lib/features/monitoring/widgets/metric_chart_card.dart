@@ -20,6 +20,8 @@ class MetricChartCard extends StatelessWidget {
   final bool isStatsValue2Text;
   final Color? statsBox2ValueColor;
 
+  final bool isLoading;
+
   const MetricChartCard({
     super.key,
     required this.title,
@@ -38,6 +40,7 @@ class MetricChartCard extends StatelessWidget {
     required this.statsBox2Value,
     this.isStatsValue2Text = false,
     this.statsBox2ValueColor,
+    this.isLoading = false,
   });
 
   @override
@@ -100,31 +103,82 @@ class MetricChartCard extends StatelessWidget {
           const SizedBox(height: 24),
           SizedBox(
             height: 120,
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: chartData,
-                    isCurved: true,
-                    color: lineColor,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: gradientColors,
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+            child: isLoading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: lineColor,
+                      strokeWidth: 3,
+                    ),
+                  )
+                : LineChart(
+                    LineChartData(
+                      gridData: const FlGridData(show: false),
+                      titlesData: const FlTitlesData(show: false),
+                      borderData: FlBorderData(show: false),
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          getTooltipColor: (LineBarSpot touchedSpot) =>
+                              badgeColor,
+                          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                            return touchedSpots.map((LineBarSpot touchedSpot) {
+                              return LineTooltipItem(
+                                touchedSpot.y.toStringAsFixed(1),
+                                GoogleFonts.plusJakartaSans(
+                                  color: lineColor,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                        getTouchedSpotIndicator:
+                            (LineChartBarData barData, List<int> spotIndexes) {
+                              return spotIndexes.map((spotIndex) {
+                                return TouchedSpotIndicatorData(
+                                  FlLine(
+                                    color: lineColor.withValues(alpha: 0.3),
+                                    strokeWidth: 2,
+                                    dashArray: [4, 4],
+                                  ),
+                                  FlDotData(
+                                    show: true,
+                                    getDotPainter:
+                                        (spot, percent, barData, index) {
+                                          return FlDotCirclePainter(
+                                            radius: 4,
+                                            color: badgeColor,
+                                            strokeWidth: 2,
+                                            strokeColor: lineColor,
+                                          );
+                                        },
+                                  ),
+                                );
+                              }).toList();
+                            },
                       ),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: chartData.isEmpty
+                              ? const [FlSpot(0, 0)]
+                              : chartData,
+                          isCurved: true,
+                          color: lineColor,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              colors: gradientColors,
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
           ),
           const SizedBox(height: 24),
           Row(
@@ -188,7 +242,7 @@ class MetricChartCard extends StatelessWidget {
                 : GoogleFonts.epilogue(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: valueColor ?? const Color(0xFF003355), 
+                    color: valueColor ?? const Color(0xFF003355),
                   ),
           ),
         ],

@@ -66,7 +66,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
               Consumer<HistoryProvider>(
                 builder: (context, provider, child) {
-                  // 1. Tampilkan Loading
                   if (provider.isLoading && provider.alerts.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
@@ -104,6 +103,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Text(
                           'System is normal. No history logs available for $_selectedFilter.',
                           style: GoogleFonts.plusJakartaSans(),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     );
