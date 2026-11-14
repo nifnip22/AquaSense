@@ -287,30 +287,12 @@ ikan air tawar. Cara kerjanya:
 
 ## Lisensi
 
-Belum ditetapkan.
+Proyek ini dilisensikan di bawah **MIT License**.
 
----
+Artinya: kode **boleh dipakai, dimodifikasi, dan dibagikan** — termasuk untuk
+keperluan komersial — dengan satu syarat: **notis hak cipta dan izin ini tetap
+dicantumkan** di setiap salinan atau bagian penting dari perangkat lunak ini.
+**Hak cipta tetap dipegang oleh pemiliknya**, dan perangkat lunak diberikan
+"apa adanya" tanpa jaminan.
 
-<details>
-<summary><b>English Overview</b></summary>
-
-**AquaSense** is an IoT system for freshwater fish farming that monitors pond
-parameters in real time and automates feeding and mixing.
-
-- **Sensing:** an ESP32 reads water temperature (DS18B20), pH, turbidity, and
-  feed level (VL53L0X time-of-flight), applying EMA filtering and temperature
-  spike rejection before publishing.
-- **Transport:** MQTT, with sensor data flowing up and control commands
-  (feed / mixer / stir) flowing back down per device.
-- **Backend:** Node.js with Hono, MQTT client, and Supabase (PostgreSQL).
-  It stores readings, evaluates thresholds, raises and resolves alerts, and
-  exposes a REST API.
-- **AquaBot:** an AI assistant powered by Groq (`llama-3.1-8b-instant`) that
-  answers fish-farming questions using a knowledge base drawn from
-  SNI 7550:2009, FAO, Boyd (1990), and Zonneveld (1991) — combined with the
-  pond's live sensor readings.
-- **Notifications:** critical conditions are pushed to WhatsApp.
-- **Mobile app:** Flutter (Provider, fl_chart, supabase_flutter) with
-  dashboard, monitoring, feeding, history, and settings screens.
-
-</details>
+Copyright (c) 2026 Hanif Ahmad & RenggaX
