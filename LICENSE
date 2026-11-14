@@ -1,0 +1,54 @@
+<details>
+<summary><b>Isi file LICENSE — klik untuk buka</b></summary>
+
+```
+MIT License
+
+Copyright (c) 2026 Hanif Ahmad & RenggaX
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+</details>
+
+---
+
+<details>
+<summary><b>English Overview</b></summary>
+
+**AquaSense** is an IoT system for freshwater fish farming that monitors pond
+parameters in real time and automates feeding and mixing.
+
+- **Sensing:** an ESP32 reads water temperature (DS18B20), pH, turbidity, and
+  feed level (VL53L0X time-of-flight), applying EMA filtering and temperature
+  spike rejection before publishing.
+- **Transport:** MQTT, with sensor data flowing up and control commands
+  (feed / mixer / stir) flowing back down per device.
+- **Backend:** Node.js with Hono, MQTT client, and Supabase (PostgreSQL).
+  It stores readings, evaluates thresholds, raises and resolves alerts, and
+  exposes a REST API.
+- **AquaBot:** an AI assistant powered by Groq (`llama-3.1-8b-instant`) that
+  answers fish-farming questions using a knowledge base drawn from
+  SNI 7550:2009, FAO, Boyd (1990), and Zonneveld (1991) — combined with the
+  pond's live sensor readings.
+- **Notifications:** critical conditions are pushed to WhatsApp.
+- **Mobile app:** Flutter (Provider, fl_chart, supabase_flutter) with
+  dashboard, monitoring, feeding, history, and settings screens.
+
+</details>
